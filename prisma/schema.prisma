@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Konser {
+  id      Int      @id @default(autoincrement())
+  nama    String
+  lokasi  String
+  tanggal DateTime
+
+  tiket          Ticket[]
+  konserKategori KonserKategori[]
+}
+
+model Kategori {
+  id   Int    @id @default(autoincrement())
+  nama String
+
+  tickets        Ticket[]         @relation("KategoriToTicket")
+  konserKategori KonserKategori[]
+}
+
+model Ticket {
+  id          Int      @id @default(autoincrement())
+  seat        String
+  tipeTempat  String
+  harga_awal  Int
+  batas_waktu DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  konserId Int
+  konser   Konser @relation(fields: [konserId], references: [id])
+
+  kategoriId Int
+  kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+  bids       Bid[]
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  
+}
+
+model KonserKategori {
+  id Int @id @default(autoincrement())
+
+  konserId Int
+  konser   Konser @relation(fields: [konserId], references: [id])
+
+  kategoriId Int
+  kategori   Kategori @relation(fields: [kategoriId], references: [id])
+
+  @@unique([konserId, kategoriId])
+}
+
+model Bid {
+  id       Int    @id @default(autoincrement())
+  amount   Int
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+  ticketId Int
+
+  user   User @relation(fields: [userId], references: [id]) // ⬅️ tambahkan ini
+  userId Int // ⬅️ dan ini
+
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String?  // ⬅️ Tambahkan ini kalau kamu ingin simpan nama
+  email        String?  @unique
+  password     String?
+  phoneNumber  String?  @unique
+  isVerified   Boolean  @default(false)
+  role         Role     @default(USER)
+  bids         Bid[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tickets      Ticket[]
+}
+
+
+enum Role {
+  USER
+  ADMIN
+}

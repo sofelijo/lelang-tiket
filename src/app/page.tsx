@@ -1,50 +1,82 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+// app/page.tsx
+'use client'
 
-export default function Home() {
-  const tickets = [
-    {
-      id: 1,
-      artist: "BLACKPINK WORLD TOUR",
-      venue: "Jakarta International Stadium",
-      date: "24 Mei 2025",
-      price: "Rp2.500.000",
-      timeLeft: "2 jam 14 menit",
-    },
-    {
-      id: 2,
-      artist: "Coldplay Music of The Spheres",
-      venue: "Stadion Utama GBK",
-      date: "30 Juni 2025",
-      price: "Rp3.200.000",
-      timeLeft: "5 jam 20 menit",
-    },
-    {
-      id: 3,
-      artist: "Taylor Swift | The Eras Tour",
-      venue: "Singapore National Stadium",
-      date: "15 Juli 2025",
-      price: "Rp4.800.000",
-      timeLeft: "1 hari 3 jam",
-    },
-    {
-      id: 4,
-      artist: "NCT Nation World Tour",
-      venue: "ICE BSD City",
-      date: "10 Agustus 2025",
-      price: "Rp1.750.000",
-      timeLeft: "3 jam 50 menit",
-    },
-  ];
+import { useEffect, useState } from 'react'
 
-  return (
-    
-    <div className="bg-red-500 text-white p-4">
-  Ini seharusnya latar belakangnya merah
-</div>
-
-    
-  );
-  
+type Ticket = {
+  id: number
+  seat: string
+  tipeTempat: string
+  harga_awal: number
+  batas_waktu: string
+  konser: {
+    nama: string
+    lokasi: string
+    tanggal: string
+  }
+  kategori: {
+    nama: string
+  }
 }
 
+export default function Home() {
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/ticket')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Gagal mengambil data tiket')
+        }
+        return res.json()
+      })
+      .then((data) => setTickets(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <main className="p-6">
+      <div className="flex justify-between items-center mt-8 mb-4">
+        <h1 className="text-2xl font-bold text-white">Daftar Lelang Tiket</h1>
+        <a
+          href="/add"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+        >
+          Tambahkan Lelang
+        </a>
+      </div>
+
+      {loading ? (
+        <p>Memuat data...</p>
+      ) : tickets.length === 0 ? (
+        <p>Tidak ada tiket tersedia.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {tickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              className="bg-gray-800 text-white p-4 rounded-xl shadow-md transition hover:scale-105"
+            >
+              <h2 className="text-xl font-semibold mb-2">{ticket.konser.nama}</h2>
+              <p className="text-sm text-gray-300">Lokasi: {ticket.konser.lokasi}</p>
+              <p className="text-sm text-gray-300">Tanggal: {new Date(ticket.konser.tanggal).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-300">Kategori: {ticket.kategori.nama}</p>
+              <p className="text-sm text-gray-300">Seat: {ticket.seat} ({ticket.tipeTempat})</p>
+              <p className="text-sm text-gray-300">Harga Awal: Rp{ticket.harga_awal.toLocaleString()}</p>
+              <p className="text-sm text-gray-300">Batas Waktu: {new Date(ticket.batas_waktu).toLocaleString()}</p>
+              <button
+                onClick={() => window.open(`/ticket/${ticket.id}`, "_blank")}
+                className="mt-3 inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
+                Tawar Sekarang
+              </button>
+            </div>
+          ))}
+        </div>
+
+      )}
+    </main>
+  )
+}
