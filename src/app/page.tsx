@@ -3,6 +3,9 @@
 
 import { useEffect, useState } from "react";
 import Banner from "@/app/components/Banner";
+import SearchConcert from "@/app/components/SearchConcert"
+
+import { Card } from "@/components/ui/card"
 
 //import CommentSection from '@/app/components/CommentSection';
 
@@ -22,9 +25,28 @@ type Ticket = {
   };
 };
 
+type Konser = {
+  id: number
+  nama: string
+  tanggal: string
+  tiket: {
+    id: number
+    tipeTempat: string
+    harga_awal: number
+    statusLelang: string
+  }[]
+}
+
+
 export default function Home() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [results, setResults] = useState<Konser[]>([])
+
+  const handleSearchResults = (data: Konser[]) => {
+    setResults(data)
+  }
+
 
   useEffect(() => {
     fetch("/api/ticket")
@@ -41,6 +63,30 @@ export default function Home() {
 
   return (
     <main className="p-6">
+
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Cari Konser</h1>
+
+      </div>
+     
+      <SearchConcert onSearch={handleSearchResults} />
+
+      <div className="mt-4 space-y-4">
+        {results.map((konser) => (
+          <Card key={konser.id} className="p-4">
+            <h2 className="text-lg font-bold">{konser.nama}</h2>
+            <p>{konser.tanggal}</p>
+            <ul className="ml-4 list-disc">
+              {konser.tiket.map((tiket) => (
+                <li key={tiket.id}>
+                  {tiket.tipeTempat} - Rp{tiket.harga_awal.toLocaleString()} ({tiket.statusLelang})
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ))}
+      </div>
+
       <div className="p-6">
         <Banner />
         {/* Komponen lain seperti daftar tiket, dsb */}
