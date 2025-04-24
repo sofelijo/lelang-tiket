@@ -15,6 +15,7 @@ model Konser {
 
   tiket          Ticket[]
   konserKategori KonserKategori[]
+  Comment        Comment[]
 }
 
 model Kategori {
@@ -25,24 +26,59 @@ model Kategori {
   konserKategori KonserKategori[]
 }
 
+// model Ticket {
+//   id          Int      @id @default(autoincrement())
+//   seat        String
+//   tipeTempat  String
+//   harga_awal  Int
+//   batas_waktu DateTime
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @default(now()) @updatedAt
+
+//   konserId Int
+//   konser   Konser @relation(fields: [konserId], references: [id])
+
+//   kategoriId Int
+//   kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+//   bids       Bid[]
+//   user       User     @relation(fields: [userId], references: [id])
+//   userId     Int
+
+// }
+
 model Ticket {
-  id          Int      @id @default(autoincrement())
-  seat        String
-  tipeTempat  String
-  harga_awal  Int
-  batas_waktu DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id               Int              @id @default(autoincrement())
+  seat             String? // Bisa null jika bukan 'duduk'
+  tipeTempat       String
+  harga_awal       Int
+  harga_beli       Int?
+  kelipatan        Int?
+  batas_waktu      DateTime
+  deskripsi        String?
+  perpanjangan_bid PerpanjanganBid? // ENUM baru
+  user             User?            @relation(fields: [userId], references: [id])
+  userId           Int?
+  konser           Konser           @relation(fields: [konserId], references: [id])
+  konserId         Int
+  kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+  kategoriId       Int
+  jumlah Int @default(1)           // jumlah tiket yang dijual
+  statusLelang      StatusLelang     @default(BERLANGSUNG) // enum status
+  bids             Bid[]
 
-  konserId Int
-  konser   Konser @relation(fields: [konserId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Comment   Comment[]
+}
 
-  kategoriId Int
-  kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
-  bids       Bid[]
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int
-  
+enum StatusLelang {
+  PENDING
+  BERLANGSUNG
+  SELESAI
+}
+enum PerpanjanganBid {
+  DUA_HARI
+  SATU_HARI
 }
 
 model KonserKategori {
@@ -70,21 +106,38 @@ model Bid {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String?  // ⬅️ Tambahkan ini kalau kamu ingin simpan nama
-  email        String?  @unique
-  password     String?
-  phoneNumber  String?  @unique
-  isVerified   Boolean  @default(false)
-  role         Role     @default(USER)
-  bids         Bid[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  tickets      Ticket[]
+  id          Int       @id @default(autoincrement())
+  name        String? // ⬅️ Tambahkan ini kalau kamu ingin simpan nama
+  email       String?   @unique
+  password    String?
+  phoneNumber String?   @unique
+  isVerified  Boolean   @default(false)
+  role        Role      @default(USER)
+  bids        Bid[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tickets     Ticket[]
+  Comment     Comment[]
 }
-
 
 enum Role {
   USER
   ADMIN
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  // Tambahkan ini untuk dukung komentar di konser
+  konser   Konser? @relation(fields: [konserId], references: [id])
+  konserId Int?
+
+  // Tiket juga tetap ada jika ingin support komentar di tiket
+  ticket   Ticket? @relation(fields: [ticketId], references: [id])
+  ticketId Int?
 }

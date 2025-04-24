@@ -1,63 +1,80 @@
-// src/app/ticket/[id]/page.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import CommentSection from '@/app/components/CommentSection';
+import { Ticket } from "@/lib/types";
 
 export default function TicketDetailPage() {
+  
   const { id } = useParams();
   const [ticket, setTicket] = useState<any>(null);
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState("");
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   useEffect(() => {
     if (!id) return;
-  
+
     fetch(`/api/ticket/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Gagal ambil data tiket');
+      .then((res) => {
+        if (!res.ok) throw new Error("Gagal ambil data tiket");
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         setTicket(data);
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error:', error);
-        setError('Data tiket tidak ditemukan.');
+      .catch((error) => {
+        console.error("Error:", error);
+        setError("Data tiket tidak ditemukan.");
         setLoading(false);
       });
   }, [id]);
-  
 
   const handleBid = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/bid', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId: ticket.id, amount: parseInt(amount) }),
+    setMessage(null);
+
+    const bidAmount = parseInt(amount);
+    if (isNaN(bidAmount) || bidAmount <= ticket.harga_awal) {
+      setMessage({
+        type: "error",
+        text: "Penawaran harus lebih tinggi dari harga awal",
+      });
+      return;
+    }
+
+    const res = await fetch("/api/bid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId: ticket.id, amount: bidAmount }),
     });
     const data = await res.json();
+
     if (res.ok) {
-      setTicket(prev => ({ ...prev, bids: [data, ...prev.bids] }));
-      setAmount('');
+      setTicket((prev: any) => ({
+        ...prev,
+        bids: [{ ...data, user: data.user }, ...prev.bids],
+      }));
+
+      setAmount("");
+      setMessage({ type: "success", text: "Penawaran berhasil dikirim!" });
     } else {
-      alert('Gagal menawar: ' + data.message);
+      setMessage({ type: "error", text: data.message || "Gagal menawar" });
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p className="text-white p-4">Loading...</p>;
 
   return (
     <div className="p-6 text-white bg-black min-h-screen">
-      {/* ✅ Tampilkan pesan error jika ada */}
-      {error && (
-        <p className="mb-4 text-red-500 font-semibold">{error}</p>
-      )}
-  
-      {/* ✅ Jika tidak error, tampilkan detail tiket */}
+      {error && <p className="mb-4 text-red-500 font-semibold">{error}</p>}
+
       {!error && (
         <>
           <h1 className="text-3xl font-bold mb-4">
@@ -65,8 +82,10 @@ export default function TicketDetailPage() {
           </h1>
           <p className="mb-2">Tempat: {ticket.konser.tempat}</p>
           <p className="mb-2">Tanggal: {ticket.konser.tanggal}</p>
-          <p className="mb-4">Harga Awal: Rp{ticket.harga_awal}</p>
-  
+          <p className="mb-4">
+            Harga Awal: Rp{ticket.harga_awal.toLocaleString()}
+          </p>
+
           <form onSubmit={handleBid} className="mb-6">
             <label className="block mb-2">Tawar Harga</label>
             <input
@@ -83,7 +102,17 @@ export default function TicketDetailPage() {
               Tawar Sekarang
             </button>
           </form>
-  
+
+          {message && (
+            <p
+              className={`mb-4 font-semibold ${
+                message.type === "success" ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {message.text}
+            </p>
+          )}
+
           <h2 className="text-xl font-semibold mb-2">Riwayat Penawaran</h2>
           {ticket.bids.length === 0 ? (
             <p>Belum ada penawaran.</p>
@@ -91,14 +120,20 @@ export default function TicketDetailPage() {
             <ul className="space-y-2">
               {ticket.bids.map((bid: any, i: number) => (
                 <li key={i} className="p-2 bg-gray-800 rounded">
-                  Rp{bid.amount} oleh {bid.user?.name ?? 'Pengguna'}
+                  <div>💰 Rp{bid.amount}</div>
+                  <div>👤 {bid.user?.name ?? "Pengguna"}</div>
+                  <div className="text-sm text-gray-400">
+                    🕒 {new Date(bid.createdAt).toLocaleString()}
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+          <CommentSection itemId={ticket.id} itemType="ticket" />
+
+
         </>
       )}
     </div>
   );
-  
 }

@@ -16,7 +16,8 @@ export default function AddTicketPage() {
   const [kelipatan, setHargaKelipatan] = useState("");
   const [perpanjangan_bid, setPerpanjanganBid] = useState("TANPA_PERPANJANGAN");
   const [deskripsi, setDeskripsi] = useState("");
-  const [jumlah, setJumlah] = useState("");
+  // Tambahkan ini di atas state konserId
+  const [tipePenjualan, setTipePenjualan] = useState("LELANG");
 
   // const [perpanjanganWaktuBid, setPerpanjanganWaktuBid] = useState('');
 
@@ -58,8 +59,6 @@ export default function AddTicketPage() {
         kelipatan: kelipatan ? parseInt(kelipatan) : null,
         perpanjangan_bid: perpanjangan_bid || null,
         deskripsi,
-        jumlah: parseInt(jumlah),
-        statusLelang: "BERLANGSUNG", // ditambahkan otomatis
       }),
     });
 
@@ -75,6 +74,20 @@ export default function AddTicketPage() {
     <div className="min-h-screen bg-black text-white p-6">
       <h1 className="text-2xl font-bold mb-6">Tambah Lelang Tiket</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+        {/* Tambahkan di awal form sebelum konser */}
+        <div>
+          <label className="block mb-1">Tipe Penjualan</label>
+          <select
+            value={tipePenjualan}
+            onChange={(e) => setTipePenjualan(e.target.value)}
+            className="w-full p-2 rounded bg-gray-700 text-white"
+            required
+          >
+            <option value="LELANG">Lelang</option>
+            <option value="LANGSUNG">Jual Langsung</option>
+          </select>
+        </div>
+
         <div>
           <label className="block mb-1">Konser</label>
           <select
@@ -135,18 +148,9 @@ export default function AddTicketPage() {
             />
           </div>
         )}
+
         <div>
-          <label className="block mb-1">Jumlah Tiket</label>
-          <input
-            type="number"
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            value={jumlah}
-            onChange={(e) => setJumlah(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-1">Harga Awal</label>
+          <label className="block mb-1">Harga Jual Sekarang</label>
           <input
             type="number"
             className="w-full p-2 rounded bg-gray-700 text-white"
@@ -156,16 +160,6 @@ export default function AddTicketPage() {
           />
         </div>
 
-        <div>
-          <label className="block mb-1">Batas Waktu</label>
-          <input
-            type="datetime-local"
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            value={batas_waktu}
-            onChange={(e) => setBatasWaktu(e.target.value)}
-            required
-          />
-        </div>
 
         <div>
           <label className="block mb-1">Harga Beli Sekarang (opsional)</label>
@@ -177,28 +171,9 @@ export default function AddTicketPage() {
           />
         </div>
 
-        <div>
-          <label className="block mb-1">Kelipatan Penawaran (opsional)</label>
-          <input
-            type="number"
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            value={kelipatan}
-            onChange={(e) => setHargaKelipatan(e.target.value)}
-          />
-        </div>
+       
 
-        <div>
-          <label className="block mb-1">Perpanjangan Waktu Bid</label>
-          <select
-            value={perpanjangan_bid}
-            onChange={(e) => setPerpanjanganBid(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white"
-          >
-            <option value="TANPA_PERPANJANGAN">Tanpa Perpanjangan</option>
-            <option value="SATU_HARI">1 x 24 jam</option>
-            <option value="DUA_HARI">2 x 24 jam</option>
-          </select>
-        </div>
+        
         <div>
           <label className="block mb-1">Deskripsi</label>
           <textarea
@@ -208,6 +183,57 @@ export default function AddTicketPage() {
             required
           />
         </div>
+
+        {tipePenjualan === "LELANG" && (
+          <>
+            <div>
+              <label className="block mb-1">Harga Awal</label>
+              <input
+                type="number"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+                value={harga_awal}
+                onChange={(e) => setHargaAwal(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1">Batas Waktu</label>
+              <input
+                type="datetime-local"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+                value={batas_waktu}
+                onChange={(e) => setBatasWaktu(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1">
+                Kelipatan Penawaran (opsional)
+              </label>
+              <input
+                type="number"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+                value={kelipatan}
+                onChange={(e) => setHargaKelipatan(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1">Perpanjangan Waktu Bid</label>
+              <select
+                value={perpanjangan_bid}
+                onChange={(e) => setPerpanjanganBid(e.target.value)}
+                className="w-full p-2 rounded bg-gray-700 text-white"
+              >
+                <option value="TANPA_PERPANJANGAN">Tanpa Perpanjangan</option>
+                <option value="SATU_HARI">1 x 24 jam</option>
+                <option value="DUA_HARI">2 x 24 jam</option>
+              </select>
+            </div>
+          </>
+        )}
 
         <button
           type="submit"
