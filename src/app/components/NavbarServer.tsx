@@ -1,7 +1,7 @@
 // app/components/NavbarServer.tsx
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import LogoutButton from './LogoutButton'; // kita buat di step 2
+import LogoutButton from './LogoutButton';
 
 export default async function NavbarServer() {
   const session = await getServerSession(authOptions);
@@ -14,8 +14,10 @@ export default async function NavbarServer() {
         <a href="/market">Jual Beli</a>
         {session?.user ? (
           <>
-            <span>👋 {session.user.email}</span>
-            <LogoutButton /> {/* tombol logout client-side */}
+            <a href="/profile" className="hover:underline">
+              👤 {session.user.name || 'Profil'}
+            </a>
+            <LogoutButton />
           </>
         ) : (
           <a href="/login">Login</a>

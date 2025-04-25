@@ -6,6 +6,12 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+model Wilayah {
+  id   String @id @db.VarChar(10)
+  nama String @db.VarChar(100)
+
+  @@map("wilayah") // penting: agar Prisma tidak mencoba bikin ulang tabel
+}
 
 model Konser {
   id      Int      @id @default(autoincrement())
@@ -104,6 +110,21 @@ model Bid {
 
   createdAt DateTime @default(now())
 }
+model Provinsi {
+  id     Int    @id @default(autoincrement())
+  nama   String
+  kota   Kota[]
+  users  User[]
+}
+
+model Kota {
+  id         Int      @id @default(autoincrement())
+  nama       String
+  provinsi   Provinsi @relation(fields: [provinsiId], references: [id])
+  provinsiId Int
+  users      User[]
+}
+
 
 model User {
   id          Int       @id @default(autoincrement())
@@ -113,6 +134,14 @@ model User {
   phoneNumber String?   @unique
   isVerified  Boolean   @default(false)
   role        Role      @default(USER)
+    username    String  @unique
+    image         String?  // ⬅️ Tambahkan ini untuk foto profil
+
+  bio         String?
+  kotaId      Int?
+  kota        Kota?   @relation(fields: [kotaId], references: [id])
+  provinsi   Provinsi? @relation(fields: [provinsiId], references: [id])
+  provinsiId Int?
   bids        Bid[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
