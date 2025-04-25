@@ -1,63 +1,79 @@
-// src/app/api/user/[id]/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse, NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-// GET detail user
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
-  const userId = Number(params.id);
-
-  if (!session || Number(session.user.id) !== userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phoneNumber: true,
-      isVerified: true,
-      role: true,
-      username: true,
-      bio: true,
-      image: true,
-      provinsiId: true,
-      kotaId: true,
-    },
-  });
-
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  }
-
-  return NextResponse.json(user);
+interface UserWithWilayah {
+  id: number;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  isVerified: boolean;
+  role: string;
+  username: string;
+  bio: string | null;
+  image: string | null;
+  wilayahId: string;
+  provinsi: string | null;
+  kota: string | null;
+  kecamatan: string | null;
+  kelurahan: string | null;
 }
 
-// PUT update user
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
-  const userId = Number(params.id);
 
-  const isAdmin = session?.user.role === 'ADMIN';
-  const isOwner = Number(session?.user.id) === userId;
-
-  if (!session || (!isOwner && !isAdmin)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+    const session = await getServerSession(authOptions);
+  
+    if (!session || Number(session.user.id) !== Number(params.id)) {
+      const response = NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      return response;
+    }
+  
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: Number(params.id) },
+        include: {
+          // relasi-relasi, kalau mau tambahkan
+          wilayah: true, // kalau user ada relasi wilayah
+        },
+      });
+  
+      if (!user) {
+        const response = NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
+        response.headers.set("Access-Control-Allow-Origin", "*");
+        return response;
+      }
+  
+      const response = NextResponse.json(user);
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      return response;
+    } catch (error) {
+      console.error("Error get user:", error);
+      const response = NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      return response;
+    }
   }
 
-  const data = await req.json();
+  export async function PATCH(
+    req: NextRequest,
+    context: { params: { id: string } }
+  ) {
+    const userId = Number(context.params.id); // ✅ pakai context.params
+  
+    const session = await getServerSession(authOptions);
+
+  if (
+    !session ||
+    (Number(session.user.id) !== userId && session.user.role !== "ADMIN")
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   try {
+    const data = await req.json();
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -66,14 +82,21 @@ export async function PUT(
         username: data.username,
         bio: data.bio,
         image: data.image,
-        provinsiId: data.provinsiId,
-        kotaId: data.kotaId,
+        wilayahId: data.wilayahId,
       },
     });
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error('Update error:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    if (error instanceof Error) {
+      console.error("PATCH /api/user/[id] error:", error.message);
+    } else {
+      console.error("Unknown error:", error);
+    }
+
+    return NextResponse.json(
+      { error: "Failed to update user" },
+      { status: 500 }
+    );
   }
 }

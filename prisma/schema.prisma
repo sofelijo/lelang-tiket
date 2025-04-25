@@ -6,9 +6,11 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model Wilayah {
-  id   String @id @db.VarChar(10)
-  nama String @db.VarChar(100)
+  kode  String @id @db.VarChar(10)
+  nama  String @db.VarChar(100)
+  users User[]
 
   @@map("wilayah") // penting: agar Prisma tidak mencoba bikin ulang tabel
 }
@@ -32,26 +34,6 @@ model Kategori {
   konserKategori KonserKategori[]
 }
 
-// model Ticket {
-//   id          Int      @id @default(autoincrement())
-//   seat        String
-//   tipeTempat  String
-//   harga_awal  Int
-//   batas_waktu DateTime
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @default(now()) @updatedAt
-
-//   konserId Int
-//   konser   Konser @relation(fields: [konserId], references: [id])
-
-//   kategoriId Int
-//   kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
-//   bids       Bid[]
-//   user       User     @relation(fields: [userId], references: [id])
-//   userId     Int
-
-// }
-
 model Ticket {
   id               Int              @id @default(autoincrement())
   seat             String? // Bisa null jika bukan 'duduk'
@@ -68,8 +50,8 @@ model Ticket {
   konserId         Int
   kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
   kategoriId       Int
-  jumlah Int @default(1)           // jumlah tiket yang dijual
-  statusLelang      StatusLelang     @default(BERLANGSUNG) // enum status
+  jumlah           Int              @default(1) // jumlah tiket yang dijual
+  statusLelang     StatusLelang     @default(BERLANGSUNG) // enum status
   bids             Bid[]
 
   createdAt DateTime  @default(now())
@@ -82,6 +64,7 @@ enum StatusLelang {
   BERLANGSUNG
   SELESAI
 }
+
 enum PerpanjanganBid {
   DUA_HARI
   SATU_HARI
@@ -110,43 +93,28 @@ model Bid {
 
   createdAt DateTime @default(now())
 }
-model Provinsi {
-  id     Int    @id @default(autoincrement())
-  nama   String
-  kota   Kota[]
-  users  User[]
-}
-
-model Kota {
-  id         Int      @id @default(autoincrement())
-  nama       String
-  provinsi   Provinsi @relation(fields: [provinsiId], references: [id])
-  provinsiId Int
-  users      User[]
-}
-
 
 model User {
-  id          Int       @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   name        String? // ⬅️ Tambahkan ini kalau kamu ingin simpan nama
-  email       String?   @unique
+  email       String? @unique
   password    String?
-  phoneNumber String?   @unique
-  isVerified  Boolean   @default(false)
-  role        Role      @default(USER)
-    username    String  @unique
-    image         String?  // ⬅️ Tambahkan ini untuk foto profil
+  phoneNumber String? @unique
+  isVerified  Boolean @default(false)
+  role        Role    @default(USER)
+  username    String  @unique
+  image       String? // ⬅️ Tambahkan ini untuk foto profil
 
-  bio         String?
-  kotaId      Int?
-  kota        Kota?   @relation(fields: [kotaId], references: [id])
-  provinsi   Provinsi? @relation(fields: [provinsiId], references: [id])
-  provinsiId Int?
-  bids        Bid[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  tickets     Ticket[]
-  Comment     Comment[]
+  bio String?
+
+  wilayahId String?
+  wilayah   Wilayah? @relation(fields: [wilayahId], references: [kode])
+
+  bids      Bid[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tickets   Ticket[]
+  Comment   Comment[]
 }
 
 enum Role {
@@ -170,3 +138,23 @@ model Comment {
   ticket   Ticket? @relation(fields: [ticketId], references: [id])
   ticketId Int?
 }
+
+// model Ticket {
+//   id          Int      @id @default(autoincrement())
+//   seat        String
+//   tipeTempat  String
+//   harga_awal  Int
+//   batas_waktu DateTime
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @default(now()) @updatedAt
+
+//   konserId Int
+//   konser   Konser @relation(fields: [konserId], references: [id])
+
+//   kategoriId Int
+//   kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+//   bids       Bid[]
+//   user       User     @relation(fields: [userId], references: [id])
+//   userId     Int
+
+// }

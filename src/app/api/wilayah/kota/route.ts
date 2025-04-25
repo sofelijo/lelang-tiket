@@ -10,8 +10,8 @@ export async function GET(req: Request) {
   }
 
   const kota = await prisma.$queryRaw`
-    SELECT id, nama FROM wilayah
-    WHERE LENGTH(id) = 4 AND id LIKE ${provinsiId + '%'}
+    SELECT kode, nama FROM wilayah
+    WHERE LENGTH(kode) = 5 AND kode LIKE ${provinsiId + '%'}
     ORDER BY nama
   `;
 
