@@ -18,75 +18,54 @@ export default function ProfilePage() {
     kotaId: "",
     kecamatanId: "",
     kelurahanId: "",
+    image: null as File | string | null,
   });
 
   const [loading, setLoading] = useState(true);
-
   const [provinsiList, setProvinsiList] = useState<Wilayah[]>([]);
   const [kotaList, setKotaList] = useState<Wilayah[]>([]);
   const [kecamatanList, setKecamatanList] = useState<Wilayah[]>([]);
   const [kelurahanList, setKelurahanList] = useState<Wilayah[]>([]);
 
-  // Ambil data profil user
-  // Ambil data profil user
+  // Ambil data user
   useEffect(() => {
     if (session?.user?.id) {
       fetch(`/api/user/${session.user.id}`)
         .then((res) => res.json())
         .then(async (data) => {
-          let userProvinsiKode = "";
-          let userKotaKode = "";
-          let userKecamatanKode = "";
-          let userKelurahanKode = "";
+          let provinsi = "", kota = "", kecamatan = "", kelurahan = "";
 
           if (data.wilayahId) {
-            userProvinsiKode = data.wilayahId.substring(0, 2);
-            if (data.wilayahId.length > 2) {
-              userKotaKode = data.wilayahId.substring(0, 5);
-            }
-            if (data.wilayahId.length > 5) {
-              userKecamatanKode = data.wilayahId.substring(0, 8);
-            }
-            if (data.wilayahId.length > 8) {
-              userKelurahanKode = data.wilayahId;
-            }
+            provinsi = data.wilayahId.substring(0, 2);
+            if (data.wilayahId.length > 2) kota = data.wilayahId.substring(0, 5);
+            if (data.wilayahId.length > 5) kecamatan = data.wilayahId.substring(0, 8);
+            if (data.wilayahId.length > 8) kelurahan = data.wilayahId;
           }
-          
-          console.log("Kode Provinsi User:", userProvinsiKode);
+
           setForm({
             name: data.name || "",
             email: data.email || "",
             phoneNumber: data.phoneNumber || "",
-            provinsiId: userProvinsiKode, // 👈 Bagian ini mengatur kode provinsi pengguna
-            kotaId: userKotaKode,
-            kecamatanId: userKecamatanKode,
-            kelurahanId: userKelurahanKode,
+            provinsiId: provinsi,
+            kotaId: kota,
+            kecamatanId: kecamatan,
+            kelurahanId: kelurahan,
+            image: data.image || null, // Bisa jadi string atau null
           });
 
-          console.log("form.provinsiId setelah di-set:", form.provinsiId);
-          // Bagian lain dari useEffect ini mengambil data kota, kecamatan, dan kelurahan berdasarkan kode wilayah pengguna.
-          if (userProvinsiKode) {
-            const kotaRes = await fetch(
-              `/api/wilayah/kota?provinsiId=${userProvinsiKode}`
-            );
-            const kotaData = await kotaRes.json();
+          // Load wilayah data
+          if (provinsi) {
+            const kotaData = await (await fetch(`/api/wilayah/kota?provinsiId=${provinsi}`)).json();
             setKotaList(kotaData);
           }
 
-          if (userKotaKode) {
-            const kecRes = await fetch(
-              `/api/wilayah/kecamatan?kotaId=${userKotaKode}`
-            );
-            const kecData = await kecRes.json();
-            console.log("Cek response kecamatan:", kecData); // Debug log
-            setKecamatanList(Array.isArray(kecData) ? kecData : kecData.data); // ✅ Ambil array-nya saja
+          if (kota) {
+            const kecData = await (await fetch(`/api/wilayah/kecamatan?kotaId=${kota}`)).json();
+            setKecamatanList(Array.isArray(kecData) ? kecData : kecData.data);
           }
 
-          if (userKecamatanKode) {
-            const kelRes = await fetch(
-              `/api/wilayah/kelurahan?kecamatanId=${userKecamatanKode}`
-            );
-            const kelData = await kelRes.json();
+          if (kecamatan) {
+            const kelData = await (await fetch(`/api/wilayah/kelurahan?kecamatanId=${kecamatan}`)).json();
             setKelurahanList(kelData);
           }
 
@@ -95,14 +74,12 @@ export default function ProfilePage() {
     }
   }, [session]);
 
-  // Ambil data provinsi
   useEffect(() => {
     fetch("/api/wilayah/provinsi")
       .then((res) => res.json())
       .then((data) => setProvinsiList(data));
   }, []);
 
-  // Ambil data kota saat provinsi berubah
   useEffect(() => {
     if (form.provinsiId) {
       fetch(`/api/wilayah/kota?provinsiId=${form.provinsiId}`)
@@ -119,7 +96,6 @@ export default function ProfilePage() {
     }
   }, [form.provinsiId]);
 
-  // Ambil kecamatan saat kota berubah
   useEffect(() => {
     if (form.kotaId) {
       fetch(`/api/wilayah/kecamatan?kotaId=${form.kotaId}`)
@@ -131,7 +107,6 @@ export default function ProfilePage() {
     }
   }, [form.kotaId]);
 
-  // Ambil kelurahan saat kecamatan berubah
   useEffect(() => {
     if (form.kecamatanId) {
       fetch(`/api/wilayah/kelurahan?kecamatanId=${form.kecamatanId}`)
@@ -152,18 +127,38 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("name", form.name);
+    formData.append("phoneNumber", form.phoneNumber);
+    formData.append("provinsiId", form.provinsiId);
+    formData.append("kotaId", form.kotaId);
+    formData.append("kecamatanId", form.kecamatanId);
+    formData.append("kelurahanId", form.kelurahanId);
+    if (form.image instanceof File) {
+      formData.append("image", form.image);
+    }
+
     const res = await fetch(`/api/user/${session?.user?.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      method: "PATCH",
+      body: formData,
     });
 
     if (res.ok) {
       alert("Profil berhasil diperbarui");
+      router.refresh(); // Refresh halaman untuk memuat gambar terbaru
     } else {
       alert("Gagal memperbarui profil");
     }
   };
+
+  const imageUrl =
+  form.image instanceof File
+    ? URL.createObjectURL(form.image)
+    : form.image
+    ? form.image // ✅ langsung pakai
+    : "/images/default-avatar.png";
+
 
   if (status === "loading" || loading)
     return <div className="p-4">Loading...</div>;
@@ -176,7 +171,26 @@ export default function ProfilePage() {
     <div className="max-w-xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Profil Saya</h1>
 
+      <img
+        src={imageUrl}
+        alt="Foto Profil"
+        className="w-24 h-24 rounded-full object-cover mb-2"
+      />
+
       <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="file"
+          name="image"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setForm((prev) => ({ ...prev, image: file }));
+            }
+          }}
+          className="w-full border p-2 rounded"
+        />
+
         <input
           name="name"
           value={form.name}
@@ -198,6 +212,7 @@ export default function ProfilePage() {
           placeholder="Nomor HP"
         />
 
+        {/* Select wilayah (provinsi -> kelurahan) */}
         <select
           name="provinsiId"
           value={form.provinsiId}

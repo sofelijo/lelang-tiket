@@ -12,11 +12,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       kategori: true,
       bids: {
         orderBy: {
-          createdAt: 'desc'
-        }
-      }
-    }
-    
+          createdAt: 'desc',
+        },
+        include: {
+          user: true, // 🛠️ Tambah ini supaya bid.user.name muncul!
+        },
+      },
+    },
   });
 
   if (!ticket) {

@@ -2,6 +2,10 @@ import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeFile } from "fs/promises";
+  import path from "path";
+  import { v4 as uuidv4 } from "uuid";
+  
 
 interface UserWithWilayah {
   id: number;
@@ -56,47 +60,57 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
   }
 
+  
   export async function PATCH(
     req: NextRequest,
     context: { params: { id: string } }
   ) {
-    const userId = Number(context.params.id); // ✅ pakai context.params
+    const userId = Number(context.params.id);
   
     const session = await getServerSession(authOptions);
-
-  if (
-    !session ||
-    (Number(session.user.id) !== userId && session.user.role !== "ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  try {
-    const data = await req.json();
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: data.name,
-        phoneNumber: data.phoneNumber,
-        username: data.username,
-        bio: data.bio,
-        image: data.image,
-        wilayahId: data.wilayahId,
-      },
-    });
-
-    return NextResponse.json(updatedUser);
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("PATCH /api/user/[id] error:", error.message);
-    } else {
-      console.error("Unknown error:", error);
+  
+    if (
+      !session ||
+      (Number(session.user.id) !== userId && session.user.role !== "ADMIN")
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
+  
+    try {
+      const formData = await req.formData();
+  
+      const name = formData.get("name") as string;
+      const phoneNumber = formData.get("phoneNumber") as string;
+      const wilayahId = formData.get("kelurahanId") as string;
+      const imageFile = formData.get("image") as File | null;
+  
+      let imageUrl: string | undefined;
+  
+      if (imageFile && imageFile.size > 0) {
+        const buffer = Buffer.from(await imageFile.arrayBuffer());
+        const filename = `${uuidv4()}-${imageFile.name}`;
+        const uploadPath = path.join(process.cwd(), "public/uploads", filename);
+        await writeFile(uploadPath, buffer);
+        imageUrl = `/uploads/${filename}`;
+      }
+  
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          name,
+          phoneNumber,
+          wilayahId,
+          image: imageUrl, // simpan image jika ada
+        },
+      });
+  
+      return NextResponse.json(updatedUser);
+    } catch (error) {
+      console.error("PATCH /api/user/[id] error:", error);
+      return NextResponse.json(
+        { error: "Failed to update user" },
+        { status: 500 }
+      );
+    }
   }
-}
+  
