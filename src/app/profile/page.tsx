@@ -3,12 +3,23 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Wilayah = { kode: string; nama: string };
 
@@ -25,6 +36,7 @@ export default function ProfilePage() {
     kecamatanId: "",
     kelurahanId: "",
     image: null as File | string | null,
+    username: "", // <--- tambah ini,
   });
 
   const [loading, setLoading] = useState(true);
@@ -40,7 +52,10 @@ export default function ProfilePage() {
         const res = await fetch(`/api/user/${session.user.id}`);
         const data = await res.json();
 
-        let provinsi = "", kota = "", kecamatan = "", kelurahan = "";
+        let provinsi = "",
+          kota = "",
+          kecamatan = "",
+          kelurahan = "";
         if (data.wilayahId) {
           provinsi = data.wilayahId.substring(0, 2);
           kota = data.wilayahId.substring(0, 5);
@@ -57,18 +72,25 @@ export default function ProfilePage() {
           kecamatanId: kecamatan,
           kelurahanId: kelurahan,
           image: data.image || null,
+          username: data.username || "", // <--- ambil dari API
         });
 
         if (provinsi) {
-          const kotaData = await fetch(`/api/wilayah/kota?provinsiId=${provinsi}`).then(r => r.json());
+          const kotaData = await fetch(
+            `/api/wilayah/kota?provinsiId=${provinsi}`
+          ).then((r) => r.json());
           setKotaList(kotaData);
         }
         if (kota) {
-          const kecData = await fetch(`/api/wilayah/kecamatan?kotaId=${kota}`).then(r => r.json());
+          const kecData = await fetch(
+            `/api/wilayah/kecamatan?kotaId=${kota}`
+          ).then((r) => r.json());
           setKecamatanList(Array.isArray(kecData) ? kecData : kecData.data);
         }
         if (kecamatan) {
-          const kelData = await fetch(`/api/wilayah/kelurahan?kecamatanId=${kecamatan}`).then(r => r.json());
+          const kelData = await fetch(
+            `/api/wilayah/kelurahan?kecamatanId=${kecamatan}`
+          ).then((r) => r.json());
           setKelurahanList(kelData);
         }
 
@@ -82,32 +104,32 @@ export default function ProfilePage() {
   // Fetch provinsi awal
   useEffect(() => {
     fetch("/api/wilayah/provinsi")
-      .then(res => res.json())
-      .then(data => setProvinsiList(data));
+      .then((res) => res.json())
+      .then((data) => setProvinsiList(data));
   }, []);
 
   // Dynamic fetching on change
   useEffect(() => {
     if (form.provinsiId) {
       fetch(`/api/wilayah/kota?provinsiId=${form.provinsiId}`)
-        .then(res => res.json())
-        .then(data => setKotaList(data));
+        .then((res) => res.json())
+        .then((data) => setKotaList(data));
     }
   }, [form.provinsiId]);
 
   useEffect(() => {
     if (form.kotaId) {
       fetch(`/api/wilayah/kecamatan?kotaId=${form.kotaId}`)
-        .then(res => res.json())
-        .then(data => setKecamatanList(data));
+        .then((res) => res.json())
+        .then((data) => setKecamatanList(data));
     }
   }, [form.kotaId]);
 
   useEffect(() => {
     if (form.kecamatanId) {
       fetch(`/api/wilayah/kelurahan?kecamatanId=${form.kecamatanId}`)
-        .then(res => res.json())
-        .then(data => setKelurahanList(data));
+        .then((res) => res.json())
+        .then((data) => setKelurahanList(data));
     }
   }, [form.kecamatanId]);
 
@@ -143,11 +165,13 @@ export default function ProfilePage() {
     }
   };
 
-  const imageUrl = form.image instanceof File
-    ? URL.createObjectURL(form.image)
-    : form.image || "/images/default-avatar.png";
+  const imageUrl =
+    form.image instanceof File
+      ? URL.createObjectURL(form.image)
+      : form.image || "/images/default-avatar.png";
 
-  if (status === "loading" || loading) return <div className="p-4">Loading...</div>;
+  if (status === "loading" || loading)
+    return <div className="p-4">Loading...</div>;
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
@@ -156,8 +180,11 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto p-4">
       <Card className="w-full max-w-2xl bg-white/10 backdrop-blur-md shadow-xl rounded-2xl border-none text-white">
-        <CardHeader>
-          <h1 className="text-2xl font-bold">Profil Saya</h1>
+        <CardHeader className="flex flex-col items-center gap-1">
+          <h1 className="text-2xl font-bold text-white">Profil Saya</h1>
+          <p className="text-sm text-gray-300">
+            @{form.username || "username"}
+          </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -232,7 +259,15 @@ export default function ProfilePage() {
 
               {/* Pilihan Provinsi */}
               <Select
-                onValueChange={(val) => setForm((prev) => ({ ...prev, provinsiId: val, kotaId: "", kecamatanId: "", kelurahanId: "" }))}
+                onValueChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    provinsiId: val,
+                    kotaId: "",
+                    kecamatanId: "",
+                    kelurahanId: "",
+                  }))
+                }
                 value={form.provinsiId}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
@@ -249,7 +284,14 @@ export default function ProfilePage() {
 
               {/* Pilihan Kota */}
               <Select
-                onValueChange={(val) => setForm((prev) => ({ ...prev, kotaId: val, kecamatanId: "", kelurahanId: "" }))}
+                onValueChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    kotaId: val,
+                    kecamatanId: "",
+                    kelurahanId: "",
+                  }))
+                }
                 value={form.kotaId}
                 disabled={!form.provinsiId}
               >
@@ -267,7 +309,13 @@ export default function ProfilePage() {
 
               {/* Pilihan Kecamatan */}
               <Select
-                onValueChange={(val) => setForm((prev) => ({ ...prev, kecamatanId: val, kelurahanId: "" }))}
+                onValueChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    kecamatanId: val,
+                    kelurahanId: "",
+                  }))
+                }
                 value={form.kecamatanId}
                 disabled={!form.kotaId}
               >
@@ -285,7 +333,9 @@ export default function ProfilePage() {
 
               {/* Pilihan Kelurahan */}
               <Select
-                onValueChange={(val) => setForm((prev) => ({ ...prev, kelurahanId: val }))}
+                onValueChange={(val) =>
+                  setForm((prev) => ({ ...prev, kelurahanId: val }))
+                }
                 value={form.kelurahanId}
                 disabled={!form.kecamatanId}
               >
@@ -303,7 +353,10 @@ export default function ProfilePage() {
             </div>
 
             <CardFooter className="pt-6">
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 Simpan Perubahan
               </Button>
             </CardFooter>
