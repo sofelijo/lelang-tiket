@@ -32,20 +32,34 @@ export interface User {
     nama: string;
   }
   
-  export interface Ticket {
-    id: number;
-    seat: string;
+  export type Ticket = {
+    id: string;
+    seat: string | null;
     tipeTempat: string;
     harga_awal: number;
+    harga_beli?: number | null;
     batas_waktu: string;
-    harga_beli: number | null;
-    kelipatan: number | null;
-    perpanjangan_bid: string | null;
-    deskripsi: string;
-    konser: Konser;
-    kategori: Kategori;
-    bids: Bid[];
-  }
+    deskripsi?: string;
+    statusLelang: "PENDING" | "BERLANGSUNG" | "SELESAI";
+    jumlah: number;
+    konser: {
+      nama: string;
+      lokasi: string;
+      tanggal: string;
+    };
+    kategori: { // <-- Tambahkan ini yaa
+      nama: string;
+    };
+    bids: {
+      amount: number;
+      createdAt: string;
+      user?: {
+        name?: string;
+      } | null;
+    }[];
+  };
+  
+  
   
   export type CommentWithUser = Comment & {
   user: User | null;
