@@ -12,7 +12,7 @@ model Wilayah {
   nama  String @db.VarChar(100)
   users User[]
 
-  @@map("wilayah") // penting: agar Prisma tidak mencoba bikin ulang tabel
+  @@map("wilayah")
 }
 
 model Konser {
@@ -36,38 +36,89 @@ model Kategori {
 
 model Ticket {
   id               Int              @id @default(autoincrement())
-  seat             String? // Bisa null jika bukan 'duduk'
+  seat             String?
   tipeTempat       String
   harga_awal       Int
   harga_beli       Int?
   kelipatan        Int?
   batas_waktu      DateTime
   deskripsi        String?
-  perpanjangan_bid PerpanjanganBid? // ENUM baru
-  user             User?            @relation(fields: [userId], references: [id])
+  perpanjangan_bid PerpanjanganBid?
+  user             User?             @relation(fields: [userId], references: [id])
   userId           Int?
-  konser           Konser           @relation(fields: [konserId], references: [id])
+  konser           Konser            @relation(fields: [konserId], references: [id])
   konserId         Int
-  kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+  kategori         Kategori          @relation("KategoriToTicket", fields: [kategoriId], references: [id])
   kategoriId       Int
-  jumlah           Int              @default(1) // jumlah tiket yang dijual
-  statusLelang     StatusLelang     @default(BERLANGSUNG) // enum status
+  jumlah           Int               @default(1)
+  statusLelang     StatusLelang      @default(BERLANGSUNG)
   bids             Bid[]
+  pembayaran       Pembayaran[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  pemenangId Int?
+  pemenang   User? @relation("TicketPemenang", fields: [pemenangId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Comment   Comment[]
 }
 
-enum StatusLelang {
-  PENDING
-  BERLANGSUNG
-  SELESAI
+model Bid {
+  id       Int    @id @default(autoincrement())
+  amount   Int
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+  ticketId Int
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  createdAt DateTime @default(now())
 }
 
-enum PerpanjanganBid {
-  DUA_HARI
-  SATU_HARI
+model Pembayaran {
+  id               Int               @id @default(autoincrement())
+  ticketId         Int
+  ticket           Ticket             @relation(fields: [ticketId], references: [id])
+
+  buyerId          Int
+  buyer            User               @relation(fields: [buyerId], references: [id])
+
+  metodePembayaran MetodePembayaran
+  jumlahTotal      Int                // Harga + kode unik
+  kodeUnik         Int
+  feePlatform      Int
+  buktiPembayaran  String?             // Upload bukti pembayaran
+  statusPembayaran StatusPembayaran   @default(PENDING)
+
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model User {
+  id          Int     @id @default(autoincrement())
+  name        String?
+  email       String? @unique
+  password    String?
+  phoneNumber String? @unique // ← dipakai juga sebagai nomor WhatsApp
+  isVerified  Boolean @default(false)
+  role        Role    @default(USER)
+  username    String  @unique
+  image       String?
+  bio         String?
+  namaBank    String?
+  rekeningBank String? // ← Rekening Bank untuk transfer hasil jual
+
+  wilayahId String?
+  wilayah   Wilayah? @relation(fields: [wilayahId], references: [kode])
+
+  bids          Bid[]
+  tickets       Ticket[]
+  ticketsMenang Ticket[] @relation("TicketPemenang")
+  pembayaran    Pembayaran[]
+  Comment       Comment[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model KonserKategori {
@@ -82,39 +133,31 @@ model KonserKategori {
   @@unique([konserId, kategoriId])
 }
 
-model Bid {
-  id       Int    @id @default(autoincrement())
-  amount   Int
-  ticket   Ticket @relation(fields: [ticketId], references: [id])
-  ticketId Int
-
-  user   User @relation(fields: [userId], references: [id]) // ⬅️ tambahkan ini
-  userId Int // ⬅️ dan ini
-
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
   createdAt DateTime @default(now())
+
+  user      User   @relation(fields: [userId], references: [id])
+  userId    Int
+
+  konser    Konser? @relation(fields: [konserId], references: [id])
+  konserId  Int?
+
+  ticket    Ticket? @relation(fields: [ticketId], references: [id])
+  ticketId  Int?
 }
 
-model User {
-  id          Int     @id @default(autoincrement())
-  name        String? // ⬅️ Tambahkan ini kalau kamu ingin simpan nama
-  email       String? @unique
-  password    String?
-  phoneNumber String? @unique
-  isVerified  Boolean @default(false)
-  role        Role    @default(USER)
-  username    String  @unique
-  image       String? // ⬅️ Tambahkan ini untuk foto profil
+enum StatusLelang {
+  PENDING
+  BERLANGSUNG
+  SELESAI
+}
 
-  bio String?
-
-  wilayahId String?
-  wilayah   Wilayah? @relation(fields: [wilayahId], references: [kode])
-
-  bids      Bid[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  tickets   Ticket[]
-  Comment   Comment[]
+enum PerpanjanganBid {
+  TANPA
+  DUA_HARI
+  SATU_HARI
 }
 
 enum Role {
@@ -122,22 +165,21 @@ enum Role {
   ADMIN
 }
 
-model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
-
-  // Tambahkan ini untuk dukung komentar di konser
-  konser   Konser? @relation(fields: [konserId], references: [id])
-  konserId Int?
-
-  // Tiket juga tetap ada jika ingin support komentar di tiket
-  ticket   Ticket? @relation(fields: [ticketId], references: [id])
-  ticketId Int?
+enum StatusPembayaran {
+  PENDING
+  DIPROSES
+  BERHASIL
+  GAGAL
+  REFUND
 }
+
+enum MetodePembayaran {
+  TRANSFER
+  QRIS
+}
+
+
+
 
 // model Ticket {
 //   id          Int      @id @default(autoincrement())
@@ -157,4 +199,28 @@ model Comment {
 //   user       User     @relation(fields: [userId], references: [id])
 //   userId     Int
 
+// }
+// model Ticket {
+//   id               Int              @id @default(autoincrement())
+//   seat             String? // Bisa null jika bukan 'duduk'
+//   tipeTempat       String
+//   harga_awal       Int
+//   harga_beli       Int?
+//   kelipatan        Int?
+//   batas_waktu      DateTime
+//   deskripsi        String?
+//   perpanjangan_bid PerpanjanganBid? // ENUM baru
+//   user             User?            @relation(fields: [userId], references: [id])
+//   userId           Int?
+//   konser           Konser           @relation(fields: [konserId], references: [id])
+//   konserId         Int
+//   kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+//   kategoriId       Int
+//   jumlah           Int              @default(1) // jumlah tiket yang dijual
+//   statusLelang     StatusLelang     @default(BERLANGSUNG) // enum status
+//   bids             Bid[]
+
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+//   Comment   Comment[]
 // }

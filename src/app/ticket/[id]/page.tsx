@@ -1,11 +1,16 @@
+// app/ticket/[id]/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CommentSection from "@/app/components/CommentSection";
 import { Ticket } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import BuyTicketModal from "@/app/components/BuyTicketModal";
+import CountdownTimer from "@/app/components/CountdownTimer";
 
-// 🍼 Tambahan ini buat label status yang lucu
+// Label status
 const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
   PENDING: "Belum mulai",
   BERLANGSUNG: "Lagi rameee",
@@ -14,6 +19,7 @@ const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
 
 export default function TicketDetailPage() {
   const params = useParams();
+  const { toast } = useToast();
   const id = Array.isArray(params?.id) ? params?.id[0] : params?.id ?? "";
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -25,6 +31,7 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBuying, setIsBuying] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchTicket = async () => {
     try {
@@ -61,19 +68,23 @@ export default function TicketDetailPage() {
       return;
     }
 
-    const res = await fetch("/api/bid", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId: ticket.id, amount: bidAmount }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/bid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id, amount: bidAmount }),
+      });
+      const data = await res.json();
 
-    if (res.ok) {
-      await fetchTicket(); // Refetch data tiket setelah bid
-      setAmount("");
-      setMessage({ type: "success", text: "Penawaran berhasil dikirim!" });
-    } else {
-      setMessage({ type: "error", text: data.message || "Gagal menawar" });
+      if (res.ok) {
+        await fetchTicket();
+        setAmount("");
+        setMessage({ type: "success", text: "Penawaran berhasil dikirim!" });
+      } else {
+        throw new Error(data.message || "Gagal mengirim penawaran");
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: (error as Error).message });
     }
   };
 
@@ -88,20 +99,33 @@ export default function TicketDetailPage() {
         body: JSON.stringify({ ticketId: ticket.id }),
       });
       const data = await res.json();
+
       if (res.ok) {
+        toast({
+          title: "🎉 Tiket berhasil dibeli!",
+          description: "Tiketmu sudah aman. Cek di halaman profil.",
+        });
         await fetchTicket();
-        setMessage({ type: "success", text: "Tiket berhasil dibeli!" });
+        setIsModalOpen(false);
       } else {
-        setMessage({ type: "error", text: data.message || "Gagal membeli tiket" });
+        throw new Error(data.message || "Gagal membeli tiket");
       }
     } catch (err) {
-      setMessage({ type: "error", text: "Terjadi kesalahan saat membeli tiket" });
+      toast({
+        variant: "destructive",
+        title: "Gagal membeli tiket",
+        description: (err as Error).message || "Terjadi kesalahan",
+      });
     } finally {
       setIsBuying(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-300">⏳ Loading tiket...</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-center text-gray-300">⏳ Loading tiket...</div>
+    );
+
   if (error || !ticket)
     return <div className="p-8 text-center text-red-400">{error}</div>;
 
@@ -119,26 +143,45 @@ export default function TicketDetailPage() {
           <h1 className="text-4xl font-bold">
             {ticket.konser.nama} - {ticket.kategori.nama}
           </h1>
-          <div className="text-gray-400">{ticket.konser.lokasi} | {new Date(ticket.konser.tanggal).toLocaleDateString()}</div>
+          <div className="text-gray-400">
+            {ticket.konser.lokasi} |{" "}
+            {new Date(ticket.konser.tanggal).toLocaleDateString()}
+          </div>
           <div className="flex flex-wrap gap-4 mt-4">
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">💺 Seat: {ticket.seat ?? "Bebas"}</span>
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">🏟️ Tempat: {ticket.tipeTempat}</span>
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">🎟️ Jumlah: {ticket.jumlah}</span>
+            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
+              💺 Seat: {ticket.seat ?? "Bebas"}
+            </span>
+            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
+              🏟️ Tempat: {ticket.tipeTempat}
+            </span>
+            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
+              🎟️ Jumlah: {ticket.jumlah}
+            </span>
           </div>
           <p className="text-lg">
-            💰 <span className="font-semibold">Harga Awal:</span> Rp{ticket.harga_awal.toLocaleString()}
+            💰 <span className="font-semibold">Harga Awal:</span> Rp
+            {ticket.harga_awal.toLocaleString()}
           </p>
           {ticket.harga_beli && (
             <p className="text-lg">
-              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp{ticket.harga_beli.toLocaleString()}
+              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp
+              {ticket.harga_beli.toLocaleString()}
             </p>
           )}
-          <p className="text-lg">⏰ Batas Waktu: {new Date(ticket.batas_waktu).toLocaleString()}</p>
+          <p className="text-lg">
+            ⏰ Batas Waktu: {new Date(ticket.batas_waktu).toLocaleString()}
+          </p>
+
+          <CountdownTimer endTime={new Date(ticket.batas_waktu)} />
+
           {ticket.deskripsi && (
             <p className="text-gray-300 italic mt-2">📝 {ticket.deskripsi}</p>
           )}
           <p className="mt-4 font-semibold">
-            Status Lelang: <span className={`${statusColor} font-bold`}>{statusLabels[ticket.statusLelang]}</span>
+            Status Lelang:{" "}
+            <span className={`${statusColor} font-bold`}>
+              {statusLabels[ticket.statusLelang]}
+            </span>
           </p>
         </div>
 
@@ -165,20 +208,32 @@ export default function TicketDetailPage() {
             </form>
 
             {ticket.harga_beli && (
-              <button
-                type="button"
-                className="w-full bg-blue-600 hover:bg-blue-700 transition px-4 py-3 rounded-lg font-bold text-lg"
-                onClick={handleBuyNow}
-                disabled={isBuying}
-              >
-                🛒 {isBuying ? "Memproses..." : "Beli Langsung"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition px-4 py-3 rounded-lg font-bold text-lg"
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={isBuying}
+                >
+                  🛒 {isBuying ? "Memproses..." : "Beli Langsung"}
+                </button>
+
+                {/* Modal Konfirmasi */}
+                <BuyTicketModal
+                  open={isModalOpen}
+                  onClose={() => setIsModalOpen(false)}
+                  onConfirm={handleBuyNow}
+                  isBuying={isBuying}
+                />
+              </>
             )}
 
             {message && (
               <p
                 className={`mt-4 font-semibold ${
-                  message.type === "success" ? "text-green-400" : "text-red-400"
+                  message.type === "success"
+                    ? "text-green-400"
+                    : "text-red-400"
                 }`}
               >
                 {message.text}
@@ -195,10 +250,17 @@ export default function TicketDetailPage() {
           ) : (
             <ul className="space-y-3">
               {ticket.bids.map((bid, i) => (
-                <li key={i} className="p-4 bg-gray-700 rounded-lg flex justify-between items-center">
+                <li
+                  key={i}
+                  className="p-4 bg-gray-700 rounded-lg flex justify-between items-center"
+                >
                   <div>
-                    <div className="font-semibold">💰 Rp{bid.amount.toLocaleString()}</div>
-                    <div className="text-gray-400 text-sm">👤 {bid.user?.name ?? "Anonim"}</div>
+                    <div className="font-semibold">
+                      💰 Rp{bid.amount.toLocaleString()}
+                    </div>
+                    <div className="text-gray-400 text-sm">
+                      👤 {bid.user?.name ?? "Anonim"}
+                    </div>
                   </div>
                   <div className="text-sm text-gray-400">
                     🕒 {new Date(bid.createdAt).toLocaleString()}
