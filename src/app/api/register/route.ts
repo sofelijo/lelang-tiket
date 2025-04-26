@@ -3,34 +3,49 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
-
 export async function POST(req: Request) {
   try {
-    const { name, phoneNumber, email, password } = await req.json();
+    const { name, username, phoneNumber, email, password } = await req.json();
 
-    if (!name || !phoneNumber || !email || !password) {
-      return NextResponse.json({ message: 'Semua field wajib diisi' }, { status: 400 });
+    // Validasi semua field harus ada
+    if (!name || !username || !phoneNumber || !email || !password) {
+      return NextResponse.json(
+        { message: 'Semua field (name, username, phoneNumber, email, password) wajib diisi' },
+        { status: 400 }
+      );
     }
 
-    const existingUser = await prisma.user.findUnique({
+    // Cek apakah email sudah digunakan
+    const existingEmail = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (existingUser) {
+    if (existingEmail) {
       return NextResponse.json({ message: 'Email sudah terdaftar' }, { status: 400 });
     }
 
+    // Cek apakah username sudah digunakan
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUsername) {
+      return NextResponse.json({ message: 'Username sudah digunakan' }, { status: 400 });
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    
+    // Simpan user
     await prisma.user.create({
       data: {
         name,
+        username,
         phoneNumber,
         email,
         password: hashedPassword,
         isVerified: false,
-        role: 'USER', // default
+        role: 'USER',
       },
     });
 
