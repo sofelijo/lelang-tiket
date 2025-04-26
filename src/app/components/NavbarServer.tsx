@@ -1,4 +1,3 @@
-// app/components/NavbarServer.tsx
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import LogoutButton from './LogoutButton';
@@ -8,10 +7,12 @@ export default async function NavbarServer() {
 
   return (
     <nav className="bg-gray-900 text-white p-4 flex justify-between items-center">
-      <div className="text-xl font-bold">LelangTiket</div>
+      <a href="/" className="text-xl font-bold hover:underline">
+        LelangTiket
+      </a>
       <div className="flex gap-4 items-center">
-        <a href="/auction">Lelang</a>
-        <a href="/market">Jual Beli</a>
+        <a href="/auction" className="hover:underline">Lelang</a>
+        <a href="/market" className="hover:underline">Jual Beli</a>
         {session?.user ? (
           <>
             <a href="/profile" className="hover:underline">
@@ -20,7 +21,7 @@ export default async function NavbarServer() {
             <LogoutButton />
           </>
         ) : (
-          <a href="/login">Login</a>
+          <a href="/login" className="hover:underline">Login</a>
         )}
       </div>
     </nav>
