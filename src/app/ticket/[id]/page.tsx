@@ -20,7 +20,7 @@ const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
 export default function TicketDetailPage() {
   const params = useParams();
   const { toast } = useToast();
-  const id = Array.isArray(params?.id) ? params?.id[0] : params?.id ?? "";
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id ?? "";
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [amount, setAmount] = useState("");
@@ -144,8 +144,7 @@ export default function TicketDetailPage() {
             {ticket.konser.nama} - {ticket.kategori.nama}
           </h1>
           <div className="text-gray-400">
-            {ticket.konser.lokasi} |{" "}
-            {new Date(ticket.konser.tanggal).toLocaleDateString()}
+            {ticket.konser.lokasi} | {new Date(ticket.konser.tanggal).toLocaleDateString()}
           </div>
           <div className="flex flex-wrap gap-4 mt-4">
             <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
@@ -159,13 +158,11 @@ export default function TicketDetailPage() {
             </span>
           </div>
           <p className="text-lg">
-            💰 <span className="font-semibold">Harga Awal:</span> Rp
-            {ticket.harga_awal.toLocaleString()}
+            💰 <span className="font-semibold">Harga Awal:</span> Rp{ticket.harga_awal.toLocaleString()}
           </p>
           {ticket.harga_beli && (
             <p className="text-lg">
-              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp
-              {ticket.harga_beli.toLocaleString()}
+              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp{ticket.harga_beli.toLocaleString()}
             </p>
           )}
           <p className="text-lg">
@@ -220,21 +217,19 @@ export default function TicketDetailPage() {
 
                 {/* Modal Konfirmasi */}
                 <BuyTicketModal
-                  open={isModalOpen}
-                  onClose={() => setIsModalOpen(false)}
-                  onConfirm={handleBuyNow}
-                  isBuying={isBuying}
-                />
+  open={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  ticketId={ticket?.id ?? ""}
+/>
+
+
               </>
             )}
 
             {message && (
               <p
-                className={`mt-4 font-semibold ${
-                  message.type === "success"
-                    ? "text-green-400"
-                    : "text-red-400"
-                }`}
+                className={`mt-4 font-semibold ${message.type === "success" ? "text-green-400" : "text-red-400"
+                  }`}
               >
                 {message.text}
               </p>

@@ -1,9 +1,9 @@
-//app/components/buyticketmodal.tsx
-'use client';
+// app/components/BuyTicketModal.tsx
+
+"use client";
 
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
@@ -11,15 +11,49 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface BuyTicketModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  isBuying: boolean;
+  ticketId: string;
 }
 
-export default function BuyTicketModal({ open, onClose, onConfirm, isBuying }: BuyTicketModalProps) {
+export default function BuyTicketModal({ open, onClose, ticketId }: BuyTicketModalProps) {
+  const [isBuying, setIsBuying] = useState(false);
+
+  const handleBuyNow = async () => {
+    if (!ticketId) {
+      alert("ID tiket tidak valid.");
+      return;
+    }
+
+    setIsBuying(true);
+
+    try {
+      const response = await fetch("/api/buy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ticketId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal membeli tiket");
+      }
+
+      alert("🎉 Tiket berhasil dibeli!");
+      onClose(); // Tutup modal setelah sukses
+    } catch (error) {
+      console.error(error);
+      alert((error as Error).message || "Terjadi kesalahan saat membeli tiket");
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -31,7 +65,7 @@ export default function BuyTicketModal({ open, onClose, onConfirm, isBuying }: B
           <Button variant="secondary" onClick={onClose} disabled={isBuying}>
             Batal
           </Button>
-          <Button variant="default" onClick={onConfirm} disabled={isBuying}>
+          <Button variant="default" onClick={handleBuyNow} disabled={isBuying}>
             {isBuying ? "Memproses..." : "Beli Sekarang"}
           </Button>
         </DialogFooter>
