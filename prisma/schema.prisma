@@ -8,30 +8,53 @@ datasource db {
 }
 
 model Wilayah {
-  kode  String @id @db.VarChar(10)
+  kode  String @id @db.VarChar(13)
   nama  String @db.VarChar(100)
-  users User[]
+  users User[] @relation("WilayahUsers")
 
   @@map("wilayah")
 }
 
-model Konser {
-  id      Int      @id @default(autoincrement())
-  nama    String
-  lokasi  String
-  tanggal DateTime
+model User {
+  id            Int          @id @default(autoincrement())
+  name          String?
+  email         String?      @unique
+  password      String?
+  phoneNumber   String?      @unique
+  isVerified    Boolean      @default(false)
+  role          Role         @default(USER)
+  username      String       @unique
+  image         String?
+  bio           String?
+  namaBank      String?
+  rekeningBank  String?
+  wilayahId     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  bids          Bid[]
+  Comment       Comment[]
+  pembayaran    Pembayaran[]
+  ticketsMenang Ticket[]     @relation("TicketPemenang")
+  tickets       Ticket[]
+  wilayah       Wilayah?     @relation("WilayahUsers", fields: [wilayahId], references: [kode])
+}
 
-  tiket          Ticket[]
-  konserKategori KonserKategori[]
+model Konser {
+  id             Int              @id @default(autoincrement())
+  nama           String
+  lokasi         String
+  tanggal        DateTime
+  venue          String?
   Comment        Comment[]
+  konserKategori KonserKategori[]
+  tiket          Ticket[]
 }
 
 model Kategori {
-  id   Int    @id @default(autoincrement())
-  nama String
-
-  tickets        Ticket[]         @relation("KategoriToTicket")
+  id             Int              @id @default(autoincrement())
+  nama           String
   konserKategori KonserKategori[]
+  tickets        Ticket[]         @relation("KategoriToTicket")
 }
 
 model Ticket {
@@ -44,91 +67,61 @@ model Ticket {
   batas_waktu      DateTime
   deskripsi        String?
   perpanjangan_bid PerpanjanganBid?
-  user             User?             @relation(fields: [userId], references: [id])
   userId           Int?
-  konser           Konser            @relation(fields: [konserId], references: [id])
   konserId         Int
-  kategori         Kategori          @relation("KategoriToTicket", fields: [kategoriId], references: [id])
   kategoriId       Int
-  jumlah           Int               @default(1)
-  statusLelang     StatusLelang      @default(BERLANGSUNG)
+  jumlah           Int              @default(1)
+  statusLelang     StatusLelang     @default(BERLANGSUNG)
+  sebelahan        Boolean?
+  pemenangId       Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   bids             Bid[]
+  Comment          Comment[]
   pembayaran       Pembayaran[]
-
-  pemenangId Int?
-  pemenang   User? @relation("TicketPemenang", fields: [pemenangId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Comment   Comment[]
+  kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
+  konser           Konser           @relation(fields: [konserId], references: [id])
+  pemenang         User?            @relation("TicketPemenang", fields: [pemenangId], references: [id])
+  user             User?            @relation(fields: [userId], references: [id])
 }
 
 model Bid {
-  id       Int    @id @default(autoincrement())
-  amount   Int
-  ticket   Ticket @relation(fields: [ticketId], references: [id])
-  ticketId Int
-
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
-
+  id        Int      @id @default(autoincrement())
+  amount    Int
+  ticketId  Int
+  userId    Int
   createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Pembayaran {
-  id               Int               @id @default(autoincrement())
-  ticketId         Int
-  ticket           Ticket             @relation(fields: [ticketId], references: [id])
-
-  buyerId          Int
-  buyer            User               @relation(fields: [buyerId], references: [id])
-
-  metodePembayaran MetodePembayaran
-  jumlahTotal      Int                // Harga + kode unik
-  kodeUnik         Int
-  feePlatform      Int
-  buktiPembayaran  String?             // Upload bukti pembayaran
-  statusPembayaran StatusPembayaran   @default(PENDING)
-
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-}
-
-model User {
-  id          Int     @id @default(autoincrement())
-  name        String?
-  email       String? @unique
-  password    String?
-  phoneNumber String? @unique // ← dipakai juga sebagai nomor WhatsApp
-  isVerified  Boolean @default(false)
-  role        Role    @default(USER)
-  username    String  @unique
-  image       String?
-  bio         String?
-  namaBank    String?
-  rekeningBank String? // ← Rekening Bank untuk transfer hasil jual
-
-  wilayahId String?
-  wilayah   Wilayah? @relation(fields: [wilayahId], references: [kode])
-
-  bids          Bid[]
-  tickets       Ticket[]
-  ticketsMenang Ticket[] @relation("TicketPemenang")
-  pembayaran    Pembayaran[]
-  Comment       Comment[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                       Int                     @id @default(autoincrement())
+  ticketId                 Int
+  buyerId                  Int
+  metodePembayaran         MetodePembayaran
+  jumlahTotal              Int
+  kodeUnik                 Int?
+  feePlatform              Int
+  buktiPembayaran          String?
+  statusPembayaran         StatusPembayaran        @default(PENDING)
+  tanggalTransferKePenjual DateTime?
+  metodePembayaranManualId Int?
+  qrisInvoiceId            String?
+  qrisExpiredAt            DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  buyer                    User                    @relation(fields: [buyerId], references: [id])
+  metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
+  ticket                   Ticket                  @relation(fields: [ticketId], references: [id])
 }
 
 model KonserKategori {
-  id Int @id @default(autoincrement())
-
-  konserId Int
-  konser   Konser @relation(fields: [konserId], references: [id])
-
+  id         Int      @id @default(autoincrement())
+  konserId   Int
   kategoriId Int
   kategori   Kategori @relation(fields: [kategoriId], references: [id])
+  konser     Konser   @relation(fields: [konserId], references: [id])
 
   @@unique([konserId, kategoriId])
 }
@@ -137,15 +130,23 @@ model Comment {
   id        Int      @id @default(autoincrement())
   content   String
   createdAt DateTime @default(now())
-
-  user      User   @relation(fields: [userId], references: [id])
   userId    Int
-
-  konser    Konser? @relation(fields: [konserId], references: [id])
   konserId  Int?
-
-  ticket    Ticket? @relation(fields: [ticketId], references: [id])
   ticketId  Int?
+  konser    Konser?  @relation(fields: [konserId], references: [id])
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model MetodePembayaranManual {
+  id         Int          @id @default(autoincrement())
+  nama       String
+  rekening   String?
+  deskripsi  String?
+  image        String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  pembayaran Pembayaran[]
 }
 
 enum StatusLelang {
@@ -175,52 +176,5 @@ enum StatusPembayaran {
 
 enum MetodePembayaran {
   TRANSFER
-  QRIS
+  QRIS_DINAMIS
 }
-
-
-
-
-// model Ticket {
-//   id          Int      @id @default(autoincrement())
-//   seat        String
-//   tipeTempat  String
-//   harga_awal  Int
-//   batas_waktu DateTime
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @default(now()) @updatedAt
-
-//   konserId Int
-//   konser   Konser @relation(fields: [konserId], references: [id])
-
-//   kategoriId Int
-//   kategori   Kategori @relation("KategoriToTicket", fields: [kategoriId], references: [id])
-//   bids       Bid[]
-//   user       User     @relation(fields: [userId], references: [id])
-//   userId     Int
-
-// }
-// model Ticket {
-//   id               Int              @id @default(autoincrement())
-//   seat             String? // Bisa null jika bukan 'duduk'
-//   tipeTempat       String
-//   harga_awal       Int
-//   harga_beli       Int?
-//   kelipatan        Int?
-//   batas_waktu      DateTime
-//   deskripsi        String?
-//   perpanjangan_bid PerpanjanganBid? // ENUM baru
-//   user             User?            @relation(fields: [userId], references: [id])
-//   userId           Int?
-//   konser           Konser           @relation(fields: [konserId], references: [id])
-//   konserId         Int
-//   kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
-//   kategoriId       Int
-//   jumlah           Int              @default(1) // jumlah tiket yang dijual
-//   statusLelang     StatusLelang     @default(BERLANGSUNG) // enum status
-//   bids             Bid[]
-
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-//   Comment   Comment[]
-// }
