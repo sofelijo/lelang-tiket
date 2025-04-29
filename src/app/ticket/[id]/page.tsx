@@ -129,23 +129,24 @@ export default function TicketDetailPage() {
   if (error || !ticket)
     return <div className="p-8 text-center text-red-400">{error}</div>;
 
-  const statusColor = {
-    PENDING: "text-yellow-400",
-    BERLANGSUNG: "text-green-400",
-    SELESAI: "text-red-400",
-  }[ticket.statusLelang] || "text-white";
+  const statusColor =
+    {
+      PENDING: "text-yellow-400",
+      BERLANGSUNG: "text-green-400",
+      SELESAI: "text-red-400",
+    }[ticket.statusLelang] || "text-white";
 
   return (
-    
-  <div className="max-w-4xl mx-auto">
-    <div className="bg-black rounded-2xl p-6 shadow-xl space-y-8">
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-black rounded-2xl p-6 shadow-xl space-y-8">
         {/* Detail Tiket */}
         <div className="space-y-4">
           <h1 className="text-4xl font-bold">
             {ticket.konser.nama} - {ticket.kategori.nama}
           </h1>
           <div className="text-gray-400">
-            {ticket.konser.lokasi} | {new Date(ticket.konser.tanggal).toLocaleDateString()}
+            {ticket.konser.lokasi} |{" "}
+            {new Date(ticket.konser.tanggal).toLocaleDateString()}
           </div>
           <div className="flex flex-wrap gap-4 mt-4">
             <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
@@ -159,11 +160,13 @@ export default function TicketDetailPage() {
             </span>
           </div>
           <p className="text-lg">
-            💰 <span className="font-semibold">Harga Awal:</span> Rp{ticket.harga_awal.toLocaleString()}
+            💰 <span className="font-semibold">Harga Awal:</span> Rp
+            {ticket.harga_awal.toLocaleString()}
           </p>
           {ticket.harga_beli && (
             <p className="text-lg">
-              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp{ticket.harga_beli.toLocaleString()}
+              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp
+              {ticket.harga_beli.toLocaleString()}
             </p>
           )}
           <p className="text-lg">
@@ -209,28 +212,28 @@ export default function TicketDetailPage() {
               <>
                 <button
                   type="button"
-                  className="w-full bg-blue-600 hover:bg-blue-700 transition px-4 py-3 rounded-lg font-bold text-lg"
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={isBuying}
+                  onClick={() =>
+                    window.open(`/payment-v2/${ticket.id}`, "_blank")
+                  }
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition px-4 py-3 rounded-lg font-bold text-lg text-white"
                 >
-                  🛒 {isBuying ? "Memproses..." : "Beli Langsung"}
+                  🛒 Beli Langsung
                 </button>
 
                 {/* Modal Konfirmasi */}
                 <BuyTicketModal
-  open={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  ticketId={ticket?.id ?? ""}
-/>
-
-
+                  open={isModalOpen}
+                  onClose={() => setIsModalOpen(false)}
+                  ticketId={ticket?.id ?? ""}
+                />
               </>
             )}
 
             {message && (
               <p
-                className={`mt-4 font-semibold ${message.type === "success" ? "text-green-400" : "text-red-400"
-                  }`}
+                className={`mt-4 font-semibold ${
+                  message.type === "success" ? "text-green-400" : "text-red-400"
+                }`}
               >
                 {message.text}
               </p>
@@ -274,6 +277,5 @@ export default function TicketDetailPage() {
         </div>
       </div>
     </div>
-    
   );
 }
