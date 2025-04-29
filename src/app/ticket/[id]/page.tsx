@@ -20,7 +20,7 @@ const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
 export default function TicketDetailPage() {
   const params = useParams();
   const { toast } = useToast();
-  const id = Array.isArray(params?.id) ? params.id[0] : params?.id ?? "";
+  const id = Array.isArray(params?.id) ? params?.id[0] : params?.id ?? "";
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [amount, setAmount] = useState("");
@@ -136,8 +136,9 @@ export default function TicketDetailPage() {
   }[ticket.statusLelang] || "text-white";
 
   return (
-    <div className="p-6 md:p-12 text-white bg-gradient-to-b from-black to-gray-900 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-8">
+    
+  <div className="max-w-4xl mx-auto">
+    <div className="bg-black rounded-2xl p-6 shadow-xl space-y-8">
         {/* Detail Tiket */}
         <div className="space-y-4">
           <h1 className="text-4xl font-bold">
@@ -273,5 +274,6 @@ export default function TicketDetailPage() {
         </div>
       </div>
     </div>
+    
   );
 }
