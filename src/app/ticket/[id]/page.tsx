@@ -9,6 +9,9 @@ import { Ticket } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import BuyTicketModal from "@/app/components/BuyTicketModal";
 import CountdownTimer from "@/app/components/CountdownTimer";
+import { useRouter } from "next/navigation";
+
+//import router from "next/router";
 
 // Label status
 const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
@@ -21,6 +24,7 @@ export default function TicketDetailPage() {
   const params = useParams();
   const { toast } = useToast();
   const id = Array.isArray(params?.id) ? params?.id[0] : params?.id ?? "";
+  const router = useRouter();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [amount, setAmount] = useState("");
@@ -128,6 +132,32 @@ export default function TicketDetailPage() {
 
   if (error || !ticket)
     return <div className="p-8 text-center text-red-400">{error}</div>;
+  const handleBeliTiket = async () => {
+    try {
+      const res = await fetch("/api/pembayaran/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ticketId: ticket.id,
+          metodePembayaran: "QRIS_DINAMIS",
+        }), // atau "TRANSFER"
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Redirect ke halaman pembayaran dengan ID pembayaran
+        router.push(`/pembayaran/${data.id}`);
+      } else {
+        alert("Gagal membuat pembayaran: " + data.message);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      alert("Terjadi kesalahan saat membuat pembayaran.");
+    }
+  };
 
   const statusColor =
     {
@@ -207,6 +237,12 @@ export default function TicketDetailPage() {
                 🚀 Kirim Tawaran
               </button>
             </form>
+            <button
+              onClick={handleBeliTiket}
+              className="w-full bg-green-600 hover:bg-green-700 transition px-4 py-3 rounded-lg font-bold text-lg"
+            >
+              Beli Tiket Sekarang
+            </button>
 
             {ticket.harga_beli && (
               <>

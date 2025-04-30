@@ -107,6 +107,7 @@ model Pembayaran {
   statusPembayaran         StatusPembayaran        @default(PENDING)
   tanggalTransferKePenjual DateTime?
   metodePembayaranManualId Int?
+  externalId               String?
   qrisInvoiceId            String?
   qrisExpiredAt            DateTime?
   createdAt                DateTime                @default(now())
@@ -114,6 +115,8 @@ model Pembayaran {
   buyer                    User                    @relation(fields: [buyerId], references: [id])
   metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
   ticket                   Ticket                  @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId, buyerId])
 }
 
 model KonserKategori {
@@ -143,7 +146,7 @@ model MetodePembayaranManual {
   nama       String
   rekening   String?
   deskripsi  String?
-  image        String?
+  image      String?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
   pembayaran Pembayaran[]

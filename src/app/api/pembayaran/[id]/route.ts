@@ -1,0 +1,26 @@
+// /app/api/pembayaran/[id]/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const id = parseInt(params.id);
+
+  const pembayaran = await prisma.pembayaran.findUnique({
+    where: { id },
+    include: {
+      ticket: {
+        include: {
+          konser: true,
+        },
+      },
+      buyer: true,
+    },
+  });
+
+  if (!pembayaran) {
+    return NextResponse.json({ error: "Data pembayaran tidak ditemukan" }, { status: 404 });
+  }
+
+  return NextResponse.json(pembayaran);
+}
