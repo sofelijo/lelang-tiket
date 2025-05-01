@@ -103,15 +103,16 @@ model Pembayaran {
   jumlahTotal              Int
   kodeUnik                 Int?
   feePlatform              Int
-  buktiPembayaran          String?
   statusPembayaran         StatusPembayaran        @default(PENDING)
   tanggalTransferKePenjual DateTime?
   metodePembayaranManualId Int?
-  externalId               String?
-  qrisInvoiceId            String?
-  qrisExpiredAt            DateTime?
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt
+  buktiPembayaran          String?
+  externalId               String?
+  order_id String?
+  qrisExpiredAt            DateTime?
+  qrisInvoiceId            String?
   buyer                    User                    @relation(fields: [buyerId], references: [id])
   metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
   ticket                   Ticket                  @relation(fields: [ticketId], references: [id])
@@ -143,12 +144,12 @@ model Comment {
 
 model MetodePembayaranManual {
   id         Int          @id @default(autoincrement())
-  nama       String
   rekening   String?
   deskripsi  String?
-  image      String?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
+  image      String?
+  nama       String
   pembayaran Pembayaran[]
 }
 
@@ -180,4 +181,5 @@ enum StatusPembayaran {
 enum MetodePembayaran {
   TRANSFER
   QRIS_DINAMIS
+  MIDTRANS
 }

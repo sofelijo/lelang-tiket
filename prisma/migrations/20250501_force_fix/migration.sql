@@ -105,14 +105,15 @@ CREATE TABLE "Pembayaran" (
     "jumlahTotal" INTEGER NOT NULL,
     "kodeUnik" INTEGER,
     "feePlatform" INTEGER NOT NULL,
-    "buktiPembayaran" TEXT,
     "statusPembayaran" "StatusPembayaran" NOT NULL DEFAULT 'PENDING',
     "tanggalTransferKePenjual" TIMESTAMP(3),
     "metodePembayaranManualId" INTEGER,
-    "qrisInvoiceId" TEXT,
-    "qrisExpiredAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "buktiPembayaran" TEXT,
+    "externalId" TEXT,
+    "qrisExpiredAt" TIMESTAMP(3),
+    "qrisInvoiceId" TEXT,
 
     CONSTRAINT "Pembayaran_pkey" PRIMARY KEY ("id")
 );
@@ -141,11 +142,12 @@ CREATE TABLE "Comment" (
 -- CreateTable
 CREATE TABLE "MetodePembayaranManual" (
     "id" SERIAL NOT NULL,
-    "nama" TEXT NOT NULL,
     "rekening" TEXT,
     "deskripsi" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "image" TEXT,
+    "nama" TEXT NOT NULL,
 
     CONSTRAINT "MetodePembayaranManual_pkey" PRIMARY KEY ("id")
 );
@@ -158,6 +160,9 @@ CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
+
+-- CreateIndex
+CREATE INDEX "Pembayaran_ticketId_buyerId_idx" ON "Pembayaran"("ticketId", "buyerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "KonserKategori_konserId_kategoriId_key" ON "KonserKategori"("konserId", "kategoriId");
@@ -206,3 +211,4 @@ ALTER TABLE "Comment" ADD CONSTRAINT "Comment_ticketId_fkey" FOREIGN KEY ("ticke
 
 -- AddForeignKey
 ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
