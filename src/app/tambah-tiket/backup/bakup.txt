@@ -242,7 +242,7 @@ export default function TambahTiketPage() {
         </Card>
       )}
       {/* Step 3 */}
-
+    
       {/* Step 3 */}
       {step === 3 && (
         <Card className="p-6 space-y-4">
@@ -373,7 +373,7 @@ export default function TambahTiketPage() {
                   setDetail({ ...detail, harga_beli: e.target.value })
                 }
               />
-
+              
               <label className="text-sm font-medium">Batas Waktu Lelang</label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -399,20 +399,15 @@ export default function TambahTiketPage() {
                     }
                     onSelect={(date) => {
                       if (!date) return;
-                    
                       const max = addDays(new Date(), 7);
                       if (date > max) {
-                        toast.error("🚫 Jangan terlalu jauh yaa, max 7 hari aja 🤏");
+                        toast.error(
+                          "Batas waktu maksimal 7 hari dari sekarang!"
+                        );
                         return;
                       }
-                    
-                      // ⏰ Set jam ke 23:59
-                      const deadline = new Date(date);
-                      deadline.setHours(23, 59, 0, 0);
-                    
-                      setDetail({ ...detail, batas_waktu: deadline.toISOString() });
+                      setDetail({ ...detail, batas_waktu: date.toISOString() });
                     }}
-                    
                     initialFocus
                   />
                 </PopoverContent>
@@ -464,7 +459,7 @@ export default function TambahTiketPage() {
           </div>
         </Card>
       )}
-
+  
       {/* Step 4 */}
       {step === 4 && (
         <Card className="p-6 space-y-4">

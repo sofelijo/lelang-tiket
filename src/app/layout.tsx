@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/lainnya/NavbarServer";
 import SessionProviderClient from "@/app/components/lainnya/SessionProviderClient"; // 👈 tambahkan ini
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
