@@ -1,3 +1,4 @@
+//app/pembayaran/[pembayaranid]
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,8 @@ import { Stepper } from "@/components/payment/Stepper";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
-
+import { Loader2 } from "lucide-react";
+import { Pembayaran } from "@/lib/types";
 
 const BANK = {
   nama: "Mandiri",
@@ -30,22 +32,17 @@ export default function PaymentPage() {
 
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [metode, setMetode] = useState<
-    "TRANSFER" | "QRIS_DINAMIS" | "MIDTRANS"
-  >("TRANSFER");
+  const [metode, setMetode] = useState<"TRANSFER" | "QRIS_DINAMIS" | "MIDTRANS">("TRANSFER");
   const [ticketInfo, setTicketInfo] = useState<any>(null);
   const [kodeUnik, setKodeUnik] = useState(0);
   const [timeLeft, setTimeLeft] = useState(600);
   const [snapToken, setSnapToken] = useState<string | null>(null);
-
-  const [selectedBank, setSelectedBank] = useState("bca");
+  const [loading, setLoading] = useState(true);
 
   const hargaTiket = ticketInfo?.harga || 1000000;
-  //const feePlatform = Math.ceil(hargaTiket * 0.03);
   const rawFeePlatform = Math.ceil(hargaTiket * 0.03);
   const feePlatform = Math.max(rawFeePlatform, 27000);
   const isBelowMinimum = rawFeePlatform < 27000;
-
   const feeQris = metode === "QRIS_DINAMIS" ? Math.ceil(hargaTiket * 0.01) : 0;
   const feeMidtrans = metode === "MIDTRANS" ? 10000 : 0;
   const total = hargaTiket + feePlatform + feeQris + feeMidtrans + kodeUnik;
@@ -59,16 +56,14 @@ export default function PaymentPage() {
         setTicketInfo({
           id: data.ticket?.id,
           namaKonser: data.ticket?.konser?.nama,
-          tanggal: new Date(data.ticket?.konser?.tanggal).toLocaleDateString(
-            "id-ID"
-          ),
+          tanggal: new Date(data.ticket?.konser?.tanggal).toLocaleDateString("id-ID"),
           jumlah: data.ticket?.jumlah,
           tempat: data.ticket?.tipeTempat,
           seat: data.ticket?.seat,
           harga: data.ticket?.harga_beli,
         });
 
-        setMetode(data.metodePembayaran);
+        setMetode((prevMetode) => (step > 1 ? data.metodePembayaran : prevMetode));
         setKodeUnik(data.kodeUnik);
 
         if (data.qrisExpiredAt) {
@@ -77,13 +72,16 @@ export default function PaymentPage() {
           const remaining = Math.floor((expired - now) / 1000);
           setTimeLeft(remaining > 0 ? remaining : 0);
         }
+
+        setLoading(false);
       } catch (error) {
         console.error("Gagal mengambil data pembayaran", error);
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [pembayaranId]);
+  }, [pembayaranId, step]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -99,6 +97,16 @@ export default function PaymentPage() {
     }
   }, [timeLeft, step]);
 
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+    script.setAttribute("data-client-key", process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY!);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const formatRupiah = (amount: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -106,37 +114,29 @@ export default function PaymentPage() {
     }).format(amount);
 
   const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
 
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-    script.setAttribute(
-      "data-client-key",
-      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY!
-    );
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  const whatsappMessage = `Halo admin, aku mau konfirmasi pembayaran ya!\n\nID Tiket: ${
-    ticketInfo?.id
-  }\nKonser: ${ticketInfo?.namaKonser}\nTotal Bayar: ${formatRupiah(
+  const whatsappMessage = `Halo admin, aku mau konfirmasi pembayaran ya!\n\nID Tiket: ${ticketInfo?.id}\nKonser: ${ticketInfo?.namaKonser}\nTotal Bayar: ${formatRupiah(
     total
   )}\n\nNama rekening pengirim: (tulis nama rekeningmu di sini)\n\nBukti transfer: (upload screenshot ya!)`;
 
   const whatsappLink = `https://api.whatsapp.com/send/?phone=${ADMIN_PHONE}&text=${encodeURIComponent(
     whatsappMessage
   )}`;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-sm text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          Memuat halaman pembayaran...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -161,8 +161,7 @@ export default function PaymentPage() {
             <div>🎤 {ticketInfo?.namaKonser}</div>
             <div>📅 {ticketInfo?.tanggal}</div>
             <div>
-              🎫 {ticketInfo?.jumlah} Tiket - {ticketInfo?.tempat} (
-              {ticketInfo?.seat})
+              🎫 {ticketInfo?.jumlah} Tiket - {ticketInfo?.tempat} ({ticketInfo?.seat})
             </div>
           </div>
           <Separator className="my-4" />
@@ -180,29 +179,22 @@ export default function PaymentPage() {
                 batas minimal 27 ribu
               </div>
             )}
-
             {metode === "QRIS_DINAMIS" && (
               <>
                 <div className="flex justify-between">
                   <span>➕ Fee QRIS:</span>
                   <span className="text-red-500">{formatRupiah(feeQris)}</span>
                 </div>
-                <div className="text-xs text-muted-foreground italic pl-4">
-                  *tidak bisa di refund
-                </div>
+                <div className="text-xs text-muted-foreground italic pl-4">*tidak bisa di refund</div>
               </>
             )}
             {metode === "MIDTRANS" && (
               <>
                 <div className="flex justify-between">
                   <span>➕ Fee Midtrans:</span>
-                  <span className="text-red-500">
-                    {formatRupiah(feeMidtrans)}
-                  </span>
+                  <span className="text-red-500">{formatRupiah(feeMidtrans)}</span>
                 </div>
-                <div className="text-xs text-muted-foreground italic pl-4">
-                  *tidak bisa di refund
-                </div>
+                <div className="text-xs text-muted-foreground italic pl-4">*tidak bisa di refund</div>
               </>
             )}
             <div className="flex justify-between">
@@ -222,53 +214,45 @@ export default function PaymentPage() {
             </div>
           </div>
           <div className="flex gap-4 pt-4">
-            <Button
-              variant={metode === "TRANSFER" ? "default" : "outline"}
-              onClick={() => setMetode("TRANSFER")}
-            >
+            <Button variant={metode === "TRANSFER" ? "default" : "outline"} onClick={() => setMetode("TRANSFER")}>
               Transfer Bank (3%)
             </Button>
-            <Button
-              variant={metode === "QRIS_DINAMIS" ? "default" : "outline"}
-              onClick={() => setMetode("QRIS_DINAMIS")}
-            >
+            <Button variant={metode === "QRIS_DINAMIS" ? "default" : "outline"} onClick={() => setMetode("QRIS_DINAMIS")}>
               QRIS (4%)
             </Button>
-            <Button
-              variant={metode === "MIDTRANS" ? "default" : "outline"}
-              onClick={() => setMetode("MIDTRANS")}
-            >
+            <Button variant={metode === "MIDTRANS" ? "default" : "outline"} onClick={() => setMetode("MIDTRANS")}>
               Midtrans
             </Button>
           </div>
           <div className="flex justify-end pt-4">
-  {metode === "MIDTRANS" ? (
-    <Button
-      onClick={async () => {
-        const res = await fetch("/api/payment/midtrans/snap", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ticketId: ticketInfo.id }),
-        });
-        const data = await res.json();
-        if (data.token) {
-          setSnapToken(data.token);
-          setStep(2);
-        } else {
-          alert("Gagal membuat Snap token");
-        }
-      }}
-    >
-      Bayar via Midtrans
-    </Button>
-  ) : (
-    <Button onClick={() => setStep(2)}>Lanjut</Button>
-  )}
-</div>
-
-
+            {metode === "MIDTRANS" ? (
+              <Button
+                onClick={async () => {
+                  const res = await fetch("/api/payment/midtrans/snap", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticketId: ticketInfo.id }),
+                  });
+                  const data = await res.json();
+                  if (data.token) {
+                    setSnapToken(data.token);
+                    setStep(2);
+                  } else {
+                    alert("Gagal membuat Snap token");
+                  }
+                }}
+              >
+                Bayar via Midtrans
+              </Button>
+            ) : (
+              <Button onClick={() => setStep(2)}>Lanjut</Button>
+            )}
+          </div>
         </Card>
       )}
+
+     
+
 
       {/* Step 2 */}
       {step === 2 && metode !== "MIDTRANS" && (

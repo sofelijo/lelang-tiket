@@ -65,3 +65,21 @@ export interface User {
   user: User | null;
 };
 
+export type Pembayaran = {
+  id: string;
+  metodePembayaran: "TRANSFER" | "QRIS_DINAMIS" | "MIDTRANS";
+  kodeUnik: number;
+  qrisExpiredAt?: string;
+  ticket: {
+    id: number;
+    konser: {
+      nama: string;
+      tanggal: string;
+    };
+    jumlah: number;
+    tipeTempat: string;
+    seat: string;
+    harga_beli: number;
+  };
+};
+
