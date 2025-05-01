@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import CommentSection from "@/app/components/CommentSection";
+import CommentSection from "@/app/components/lainnya/CommentSection";
 import { Ticket } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import BuyTicketModal from "@/app/components/BuyTicketModal";
-import CountdownTimer from "@/app/components/CountdownTimer";
+import BuyTicketModal from "@/app/components/lainnya/BuyTicketModal";
+import CountdownTimer from "@/app/components/lainnya/CountdownTimer";
 import { Loader2 } from "lucide-react";
 
 const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {

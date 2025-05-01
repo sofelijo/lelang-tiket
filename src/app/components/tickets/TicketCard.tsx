@@ -1,5 +1,4 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 
 interface TicketCardProps {
@@ -10,6 +9,7 @@ interface TicketCardProps {
   tipeTempat?: string;
   harga?: number;
   onClick?: () => void;
+  className?: string;
 }
 
 export default function TicketCard({
@@ -20,9 +20,13 @@ export default function TicketCard({
   tipeTempat,
   harga,
   onClick,
+  className,
 }: TicketCardProps) {
   return (
-    <Card className="p-4 flex flex-col gap-2 hover:shadow-lg transition-shadow duration-300">
+    <Card
+      onClick={onClick}
+      className={`p-4 flex flex-col gap-2 hover:shadow-lg transition-all duration-200 ease-in-out rounded-2xl cursor-pointer ${className}`}
+    >
       <div className="text-lg font-bold">{namaKonser}</div>
 
       <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -51,15 +55,6 @@ export default function TicketCard({
           Rp {harga.toLocaleString("id-ID")}
         </div>
       )}
-
-      {onClick && (
-        <div className="mt-2">
-          <Button onClick={onClick} className="w-full">
-            Pilih Konser Ini
-          </Button>
-        </div>
-      )}
     </Card>
   );
 }
-    
