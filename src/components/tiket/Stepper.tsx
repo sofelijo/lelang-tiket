@@ -5,21 +5,21 @@ interface StepperProps {
 }
 
 const steps = [
-    "Cari Konser",
-    "Cara Jual",
-    "Detail Tiket",
-    "Cek & Launch",
+  { label: "Cari Konser", shortLabel: "Cari" },
+  { label: "Cara Jual", shortLabel: "Pilih" },
+  { label: "Detail Tiket", shortLabel: "Detail" },
+  { label: "Cek & Launch", shortLabel: "Cek" },
 ];
 
 export function Stepper({ step }: StepperProps) {
   return (
     <div className="flex items-center justify-between gap-2">
-      {steps.map((label, index) => {
+      {steps.map((stepItem, index) => {
         const isActive = index + 1 === step;
         const isCompleted = index + 1 < step;
 
         return (
-          <div key={label} className="flex items-center gap-2 w-full">
+          <div key={stepItem.label} className="flex items-center gap-2 w-full">
             {/* Circle step */}
             <div
               className={cn(
@@ -41,10 +41,12 @@ export function Stepper({ step }: StepperProps) {
                 isCompleted
                   ? "text-green-600"
                   : isActive
-                  ? "text-white font-semibold" : "text-muted-foreground"
+                  ? "text-white font-semibold"
+                  : "text-muted-foreground"
               )}
             >
-              {label}
+              <span className="hidden md:inline">{stepItem.label}</span>
+              <span className="inline md:hidden">{stepItem.shortLabel}</span>
             </div>
 
             {/* Line connector */}

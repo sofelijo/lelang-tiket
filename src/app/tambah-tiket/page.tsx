@@ -11,30 +11,62 @@ import TicketCard from "@/app/components/tickets/TicketCard";
 import TicketCardSkeleton from "@/app/components/tickets/TicketCardSkeleton";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { format, addDays } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
+// ... imports tetap sama
 
 export default function TambahTiketPage() {
-  
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [konserList, setKonserList] = useState<any[]>([]);
   const [selectedKonser, setSelectedKonser] = useState<any>(null);
+  const maxDate = addDays(new Date(), 7);
   const [tipeJual, setTipeJual] = useState<"LELANG" | "JUAL_LANGSUNG" | null>(
     null
   );
-  const [detail, setDetail] = useState({
+  const [kategoriList, setKategoriList] = useState<any[]>([]);
+  const [detail, setDetail] = useState<{
+    jumlah: string;
+    harga: string;
+    tipeTempat: string;
+    seat: string;
+    kategoriId: number | null;
+    harga_awal: string;
+    harga_beli: string;
+    kelipatan: string;
+    batas_waktu: string;
+    perpanjangan_bid: string;
+    deskripsi: string;
+    sebelahan: boolean;
+  }>({
     jumlah: "",
     harga: "",
     tipeTempat: "",
     seat: "",
+    kategoriId: null,
+    harga_awal: "",
+    harga_beli: "",
+    kelipatan: "",
+    batas_waktu: "",
+    perpanjangan_bid: "TANPA",
+    deskripsi: "",
+    sebelahan: false,
   });
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.title = "Tambah Tiket | MOMEN";
   }, []);
-  
+
   const handleSearch = async () => {
     setLoading(true);
     try {
@@ -49,8 +81,7 @@ export default function TambahTiketPage() {
 
   useEffect(() => {
     if (step === 1) {
-      setTipeJual(null); // reset pilihan tipe jual
-      // setSelectedKonser(null); // aktifkan ini kalau kamu juga mau reset konser
+      setTipeJual(null);
     }
   }, [step]);
 
@@ -61,6 +92,23 @@ export default function TambahTiketPage() {
     return () => clearTimeout(delay);
   }, [searchQuery]);
 
+  // 🔁 Fetch kategori saat konser dipilih
+  useEffect(() => {
+    if (!selectedKonser?.id) return;
+
+    const fetchKategori = async () => {
+      try {
+        const res = await fetch(`/api/kategori?konserId=${selectedKonser.id}`);
+        const data = await res.json();
+        setKategoriList(data || []);
+      } catch (err) {
+        console.error("Gagal fetch kategori:", err);
+      }
+    };
+
+    fetchKategori();
+  }, [selectedKonser]);
+
   const handleLaunch = () => {
     if (!detail.jumlah || !detail.harga) {
       toast.error("Jumlah dan harga tiket wajib diisi!");
@@ -68,20 +116,17 @@ export default function TambahTiketPage() {
     }
 
     toast.success("🎉 Tiket kamu udah tayang! Siap diserbu anak-anak konser!");
-    router.push("/"); // nanti ganti dengan redirect ke halaman tiket atau dashboard kamu
+    router.push("/");
   };
 
   return (
-    
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-2">🪄 Tambah Tiket Baru</h1>
-<p className="text-sm text-muted-foreground mb-4">
-  Yuk listing tiket konser kamu biar bisa langsung diserbu penonton! 🔥
-</p>
-
+      <p className="text-sm text-muted-foreground mb-4">
+        Yuk listing tiket konser kamu biar bisa langsung diserbu penonton! 🔥
+      </p>
       <Stepper step={step} />
       <Separator className="my-4" />
-
       {step === 1 && (
         <Card className="p-6 space-y-4">
           <h2 className="text-xl font-bold">1. Cari Konser</h2>
@@ -159,7 +204,6 @@ export default function TambahTiketPage() {
           </div>
         </Card>
       )}
-
       {step === 2 && (
         <Card className="p-6 space-y-4">
           <h2 className="text-xl font-bold">2. Mau dijual gimana?</h2>
@@ -197,52 +241,225 @@ export default function TambahTiketPage() {
           </div>
         </Card>
       )}
-
+      {/* Step 3 */}
+    
       {/* Step 3 */}
       {step === 3 && (
         <Card className="p-6 space-y-4">
           <h2 className="text-xl font-bold">3. Detail Tiket 🎫</h2>
+
+          <div className="text-sm text-muted-foreground mb-2">
+            🎤 Konser: <b>{selectedKonser?.nama}</b>
+          </div>
+
+          {/* Dropdown kategori */}
+          <div>
+            <label className="text-sm font-medium">Kategori Tiket</label>
+            <select
+              className="w-full border border-input bg-background p-2 rounded-md"
+              value={detail.kategoriId || ""}
+              onChange={(e) =>
+                setDetail({ ...detail, kategoriId: parseInt(e.target.value) })
+              }
+            >
+              <option value="">Pilih kategori...</option>
+              {kategoriList.map((kat) => (
+                <option key={kat.id} value={kat.id}>
+                  {kat.nama}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tipe tempat duduk */}
+          <div>
+            <label className="text-sm font-medium">Tipe Tempat</label>
+            <div className="flex gap-4 pt-1">
+              {["duduk", "berdiri"].map((tipe) => (
+                <Button
+                  key={tipe}
+                  variant={detail.tipeTempat === tipe ? "default" : "outline"}
+                  onClick={() =>
+                    setDetail({
+                      ...detail,
+                      tipeTempat: tipe,
+                      seat: tipe === "berdiri" ? "" : detail.seat,
+                    })
+                  }
+                >
+                  {tipe === "duduk" ? "🪑 Duduk" : "🕺 Berdiri"}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Seat hanya jika duduk */}
+          {detail.tipeTempat === "duduk" && (
+            <div className="flex gap-2 items-end">
+              <Input
+                placeholder="Nomor Seat (contoh: C23)"
+                value={detail.seat}
+                onChange={(e) => setDetail({ ...detail, seat: e.target.value })}
+                readOnly={detail.seat === "duduk bebas"}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDetail({
+                    ...detail,
+                    seat: detail.seat === "duduk bebas" ? "" : "duduk bebas",
+                  });
+                }}
+              >
+                {detail.seat === "duduk bebas"
+                  ? "❌ Tidak random?"
+                  : "🎲 Random"}
+              </Button>
+            </div>
+          )}
+
+          {/* Jumlah dan deskripsi */}
           <Input
             placeholder="Jumlah tiket"
             value={detail.jumlah}
             onChange={(e) => setDetail({ ...detail, jumlah: e.target.value })}
           />
-          <Input
-            placeholder="Harga (Rp)"
-            value={detail.harga}
-            onChange={(e) => setDetail({ ...detail, harga: e.target.value })}
-          />
-          <Input
-            placeholder="Tipe Tempat Duduk (ex: VIP, Festival)"
-            value={detail.tipeTempat}
+
+          <textarea
+            className="w-full border border-input bg-background p-2 rounded-md"
+            rows={3}
+            placeholder="Deskripsi tambahan..."
+            value={detail.deskripsi || ""}
             onChange={(e) =>
-              setDetail({ ...detail, tipeTempat: e.target.value })
+              setDetail({ ...detail, deskripsi: e.target.value })
             }
           />
-          <Input 
-            placeholder="Nomor Seat (opsional)"
-            value={detail.seat}
-            onChange={(e) => setDetail({ ...detail, seat: e.target.value })}
-          />
+
+          {/* Checkbox sebelahan */}
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={detail.sebelahan || false}
+              onChange={(e) =>
+                setDetail({ ...detail, sebelahan: e.target.checked })
+              }
+            />
+            Tiket ini duduknya sebelahan
+          </label>
+
+          {/* Field berbeda berdasarkan metode */}
+          {tipeJual === "LELANG" ? (
+            <>
+              <Input
+                placeholder="Harga Awal (Rp)"
+                value={detail.harga_awal || ""}
+                onChange={(e) =>
+                  setDetail({ ...detail, harga_awal: e.target.value })
+                }
+              />
+              <Input
+                placeholder="Kelipatan Bid (Rp)"
+                value={detail.kelipatan || ""}
+                onChange={(e) =>
+                  setDetail({ ...detail, kelipatan: e.target.value })
+                }
+              />
+              <Input
+                placeholder="Harga Beli Langsung (Rp)"
+                value={detail.harga_beli || ""}
+                onChange={(e) =>
+                  setDetail({ ...detail, harga_beli: e.target.value })
+                }
+              />
+              
+              <label className="text-sm font-medium">Batas Waktu Lelang</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {detail.batas_waktu ? (
+                      format(new Date(detail.batas_waktu), "dd MMM yyyy HH:mm")
+                    ) : (
+                      <span>Pilih batas waktu lelang</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      detail.batas_waktu
+                        ? new Date(detail.batas_waktu)
+                        : undefined
+                    }
+                    onSelect={(date) => {
+                      if (!date) return;
+                      const max = addDays(new Date(), 7);
+                      if (date > max) {
+                        toast.error(
+                          "Batas waktu maksimal 7 hari dari sekarang!"
+                        );
+                        return;
+                      }
+                      setDetail({ ...detail, batas_waktu: date.toISOString() });
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <label className="text-sm font-medium">Perpanjangan Bid</label>
+              <select
+                className="w-full border border-input bg-background p-2 rounded-md"
+                value={detail.perpanjangan_bid || "TANPA"}
+                onChange={(e) =>
+                  setDetail({ ...detail, perpanjangan_bid: e.target.value })
+                }
+              >
+                <option value="TANPA">Tanpa</option>
+                <option value="SATU_HARI">+1 Hari</option>
+                <option value="DUA_HARI">+2 Hari</option>
+              </select>
+            </>
+          ) : (
+            <Input
+              placeholder="Harga Tiket (Rp)"
+              value={detail.harga_beli || ""}
+              onChange={(e) =>
+                setDetail({ ...detail, harga_beli: e.target.value })
+              }
+            />
+          )}
+
           <div className="flex justify-between mt-6">
             <Button variant="outline" onClick={() => setStep(2)}>
               ⬅️ Balik
             </Button>
             <Button
-              onClick={() => {
-                if (!detail.jumlah || !detail.harga) {
-                  toast.error("Jumlah dan harga tiket wajib diisi!");
-                  return;
-                }
-                setStep(4);
-              }}
-              disabled={!detail.jumlah || !detail.harga || !detail.tipeTempat}
+              onClick={() => setStep(4)}
+              disabled={
+                !detail.jumlah ||
+                !detail.tipeTempat ||
+                !detail.kategoriId ||
+                (tipeJual === "LELANG"
+                  ? !detail.harga_awal ||
+                    !detail.kelipatan ||
+                    !detail.batas_waktu ||
+                    !detail.harga_beli
+                  : !detail.harga_beli)
+              }
             >
               Lanjut ke Review
             </Button>
           </div>
         </Card>
       )}
+  
       {/* Step 4 */}
       {step === 4 && (
         <Card className="p-6 space-y-4">
