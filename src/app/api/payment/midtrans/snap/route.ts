@@ -1,5 +1,3 @@
-// 📁 /app/api/payment/midtrans/snap/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -12,21 +10,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { ticketId } = await req.json();
+  const { pembayaranId } = await req.json();
 
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
+  const pembayaran = await prisma.pembayaran.findUnique({
+    where: { id: Number(pembayaranId) },
+  
     include: {
-      konser: true,
-      user: true,
+      ticket: {
+        include: {
+          konser: true,
+          user: true,
+        },
+      },
     },
   });
 
-  if (!ticket) {
-    return NextResponse.json({ error: "Tiket tidak ditemukan" }, { status: 404 });
+  if (!pembayaran || !pembayaran.ticket) {
+    return NextResponse.json({ error: "Pembayaran atau tiket tidak ditemukan" }, { status: 404 });
   }
 
-  const orderId = `lelang-${ticket.konser.id}-${Date.now()}`;
+  // Gunakan order_id dari tabel pembayaran
+  const orderId = pembayaran.order_id;
+  const ticket = pembayaran.ticket;
   const harga = ticket.harga_beli || 0;
   const feePlatform = Math.max(Math.ceil(harga * 0.03), 27000); // minimal fee 27rb
   const feeMidtrans = 10000;
@@ -37,7 +42,7 @@ export async function POST(req: NextRequest) {
     serverKey: process.env.MIDTRANS_SERVER_KEY!,
   });
 
-  // Waktu mulai transaksi (harus lebih dari sekarang)
+  // Waktu mulai transaksi (buffer 1 menit)
   const jakartaTime = new Date(Date.now() + 60_000).toLocaleString("en-US", {
     timeZone: "Asia/Jakarta",
     year: "numeric",
@@ -49,28 +54,18 @@ export async function POST(req: NextRequest) {
     hour12: false,
   }).replace(",", "");
 
-  await prisma.pembayaran.updateMany({
-    where: {
-      ticketId: ticket.id,
-      buyerId: Number(session.user.id),
-      metodePembayaran: "QRIS_DINAMIS",
-    },
-    data: {
-      qrisInvoiceId: orderId,
-    },
-  });
-  
-  
   const [mm, dd, yyyy, hh, mi, ss] = jakartaTime
     .match(/\d+/g)!
     .map((v) => v.padStart(2, "0"));
-  
   const startTime = `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-  
-  //const startTime = new Date(Date.now() + 60_000) // kasih buffer 1 menit
-    // .toISOString()
-    // .slice(0, 19)
-    // .replace("T", " ");
+
+  // Update metode pembayaran menjadi "MIDTRANS"
+  await prisma.pembayaran.update({
+    where: { id: pembayaran.id },
+    data: {
+      metodePembayaran: "MIDTRANS",
+    },
+  });
 
   const parameter = {
     transaction_details: {
@@ -82,7 +77,7 @@ export async function POST(req: NextRequest) {
         id: `${ticket.id}`,
         name: `Tiket Konser: ${ticket.konser.nama}`,
         quantity: 1,
-        price: total, // total dijadikan satu item
+        price: total,
       },
     ],
     customer_details: {
@@ -94,8 +89,6 @@ export async function POST(req: NextRequest) {
       unit: "minute",
       duration: 30,
     },
-
-    
   };
 
   try {

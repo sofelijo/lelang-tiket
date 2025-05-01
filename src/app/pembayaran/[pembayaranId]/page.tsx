@@ -227,23 +227,30 @@ export default function PaymentPage() {
           <div className="flex justify-end pt-4">
             {metode === "MIDTRANS" ? (
               <Button
-                onClick={async () => {
+              onClick={async () => {
+                try {
                   const res = await fetch("/api/payment/midtrans/snap", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ticketId: ticketInfo.id }),
+                    body: JSON.stringify({ pembayaranId: pembayaranId }), // GANTI INI
                   });
+            
                   const data = await res.json();
+            
                   if (data.token) {
                     setSnapToken(data.token);
                     setStep(2);
                   } else {
-                    alert("Gagal membuat Snap token");
+                    alert(data.error || "Gagal membuat Snap token");
                   }
-                }}
-              >
-                Bayar via Midtrans
-              </Button>
+                } catch (error) {
+                  alert("Terjadi kesalahan saat membuat Snap token");
+                }
+              }}
+            >
+              Bayar via Midtrans
+            </Button>
+            
             ) : (
               <Button onClick={() => setStep(2)}>Lanjut</Button>
             )}

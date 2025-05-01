@@ -97,6 +97,7 @@ model Bid {
 
 model Pembayaran {
   id                       Int                     @id @default(autoincrement())
+  order_id String?
   ticketId                 Int
   buyerId                  Int
   metodePembayaran         MetodePembayaran
@@ -109,8 +110,6 @@ model Pembayaran {
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt
   buktiPembayaran          String?
-  externalId               String?
-  order_id String?
   qrisExpiredAt            DateTime?
   qrisInvoiceId            String?
   buyer                    User                    @relation(fields: [buyerId], references: [id])

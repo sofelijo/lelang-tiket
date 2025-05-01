@@ -47,3 +47,61 @@ kalo begitu sekalian update keseluruhan data tiket menyesuaikan flow atau fitur 
 7. setelah itu, dana ditransfer oleh admin kepada penjual akkan tetapi jika tiket terbukti tidak valid, dana pembeli akan di refund
 
 catatan: data rekening pembeli atau penjual disimpan pada tabel user, nomor wa penjual diberikan setelah buyer membeli
+
+✅ LANGKAH LENGKAP TAMBAH KOLOM / UBAH schema.prisma DENGAN BENAR
+💡 CONTOH: Kita mau tambah kolom statusBayar: Boolean di model Pembayaran.
+✅ LANGKAH 1 — Ubah file schema.prisma
+Edit prisma/schema.prisma, misalnya:
+
+prisma
+Salin
+Edit
+model Pembayaran {
+  id             Int      @id @default(autoincrement())
+  // ...
+  statusBayar    Boolean? @default(false)  // ← kolom baru
+  // ...
+}
+✅ LANGKAH 2 — Buat migration dari perubahan tadi
+bash
+Salin
+Edit
+npx prisma migrate dev --name tambah-kolom-statusbayar
+Ini akan:
+
+Mendeteksi perubahan schema
+
+Membuat folder migrations/
+
+Menulis SQL-nya
+
+Update database kamu
+
+Update Prisma Client otomatis
+
+✅ LANGKAH 3 — Generate ulang Prisma Client (opsional)
+Kalau kamu pakai --skip-generate sebelumnya, jalankan ini:
+
+bash
+Salin
+Edit
+npx prisma generate
+✅ LANGKAH 4 — Commit perubahan kamu ke Git (optional tapi disarankan)
+bash
+Salin
+Edit
+git add prisma/schema.prisma prisma/migrations/
+git commit -m "Tambah kolom statusBayar di model Pembayaran"
+🔐 TIPS ANTI-DRIFT / ANTI-RUSAK:
+Hal yang Harus Dilakukan ✅	                Hal yang Harus Dihindari ❌
+Selalu pakai migrate dev	             |   Jangan ubah DB langsung (misal via pgAdmin)
+Simpan folder prisma/migrations/ di Git	|    Jangan hapus migration lama sembarangan
+Gunakan db pull hanya jika kamu edit DB langsung (darurat)	|Jangan jalankan db pull terus-menerus
+Buat migration untuk tiap schema change    |	Jangan langsung ubah schema lalu db push tiap saat di tim
+
+Kalau kamu kerja tim:
+
+Pastikan semua orang pull migration terbaru
+
+Jangan ada yang ubah database langsung dari luar Prisma
+

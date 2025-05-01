@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     metodePembayaran === "QRIS_DINAMIS"
       ? new Date(Date.now() + 30 * 60 * 1000)
       : null;
-
+  const order_id = `${ticket.konser.id}-${ticket.user?.id}-${Date.now()}`;
   // Buat data pembayaran baru
   const pembayaran = await prisma.pembayaran.create({
     data: {
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       jumlahTotal,
       kodeUnik,
       feePlatform,
+      order_id,
       statusPembayaran: "PENDING",
       qrisExpiredAt,
     },
