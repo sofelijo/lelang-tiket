@@ -28,7 +28,7 @@ export default function SearchConcert({ onSearch }: Props) {
         // const res = await fetch("/api/search?query=konserku", {
         //     method: "GET",
         //   })
-        const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`, {
+        const res = await fetch(`/api/search2?query=${encodeURIComponent(query)}`, {
             method: "GET",
           })
           

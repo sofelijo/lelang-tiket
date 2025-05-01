@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Banner from "@/app/components/Banner";
-import SearchConcert from "@/app/components/SearchConcert"
+import Banner from "@/app/components/lainnya/Banner";
+import SearchConcert from "@/app/components/lainnya/SearchConcert"
 
 import { Card } from "@/components/ui/card"
 

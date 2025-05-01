@@ -1,4 +1,4 @@
-// src/pages/api/search.ts
+// src/pages/api/search2.ts
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 
