@@ -8,18 +8,21 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role?: string;
+      phoneNumber?: string; // ✅ Tambahan untuk WhatsApp login
     };
   }
 
   interface User {
-    id: string; // ⬅️ tambahkan ini
+    id: string;
     role?: string;
+    phoneNumber?: string; // ✅ Tambahan agar bisa diakses dari JWT
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    sub: string; // ⬅️ tambahkan ini
+    sub: string;
     role?: string;
+    phoneNumber?: string; // ✅ Tambahan supaya token bisa bawa nomor WA
   }
 }

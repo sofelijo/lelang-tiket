@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
       unit: "minute",
       duration: 30,
     },
+    callbacks: {
+      finish: `${process.env.NEXT_PUBLIC_BASE_URL}/pembayaran/status`,
+    },
   };
 
   if (metodeSnap === "credit_card") {
@@ -110,7 +113,6 @@ export async function POST(req: NextRequest) {
           kodeUnik,
           jumlahTotal: total,
           snapToken: transaction.token,
-
         },
       }),
       prisma.ticket.update({
@@ -127,6 +129,5 @@ export async function POST(req: NextRequest) {
 }
 
 function metodeToMidtrans(m: string): string {
-  // Fungsi ini masih boleh digunakan jika ingin map custom
   return m;
 }

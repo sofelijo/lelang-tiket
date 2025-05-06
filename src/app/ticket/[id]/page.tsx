@@ -56,7 +56,7 @@ export default function TicketDetailPage() {
     if (!ticket) return;
 
     const bidAmount = parseInt(amount);
-    if (isNaN(bidAmount) || bidAmount <= ticket.harga_awal) {
+    if (isNaN(bidAmount) || bidAmount < ticket.harga_awal) {
       setMessage({
         type: "error",
         text: "Penawaran harus lebih tinggi dari harga awal",
@@ -195,7 +195,7 @@ export default function TicketDetailPage() {
                 <label className="block font-semibold">Tawar Harga</label>
                 <input
                   type="number"
-                  min={ticket.harga_awal + 1}
+                  min={ticket.harga_awal}
                   className="p-3 rounded bg-gray-700 text-white w-full focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Masukkan tawaran Anda"
                   value={amount}

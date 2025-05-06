@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Stepper } from "@/components/payment/Stepper";
@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 
 export default function PembayaranPage() {
   const { pembayaranId } = useParams() as { pembayaranId: string };
+  const router = useRouter();
 
   const [pembayaran, setPembayaran] = useState<any>(null);
   const [snapToken, setSnapToken] = useState<string | null>(null);
@@ -47,7 +48,6 @@ export default function PembayaranPage() {
           if (snapData.token) {
             setSnapToken(snapData.token);
 
-            // 🔄 Fetch ulang data pembayaran setelah Snap dibuat
             const refreshed = await fetch(`/api/pembayaran/${pembayaranId}`);
             const refreshedData = await refreshed.json();
             console.log("🔄 Data Pembayaran Setelah Snap:", refreshedData);
@@ -57,7 +57,6 @@ export default function PembayaranPage() {
           setSnapToken(data.snapToken);
         }
 
-        // Delay 5 detik sebelum menampilkan UI
         setTimeout(() => {
           setShowContent(true);
         }, 5000);
@@ -71,6 +70,15 @@ export default function PembayaranPage() {
     fetchData();
   }, [pembayaranId]);
 
+  // 🔁 Auto-redirect ke Step 3 jika pembayaran berhasil
+  useEffect(() => {
+    if (pembayaran?.statusPembayaran === "BERHASIL") {
+      setTimeout(() => {
+        router.push(`/pembayaran/${pembayaranId}/konfirmasi`);
+      }, 2000); // kasih jeda 2 detik biar Snap sempat berubah
+    }
+  }, [pembayaran?.statusPembayaran, pembayaranId, router]);
+
   useEffect(() => {
     console.log("💥 Coba embed Snap:", { showContent, snapToken, scriptLoaded });
     if (
@@ -83,11 +91,15 @@ export default function PembayaranPage() {
     ) {
       (window as any).snap.embed(snapToken, {
         embedId: "midtrans-container",
-        onSuccess: (result: any) => console.log("✅ success", result),
+        onSuccess: (result: any) => {
+          console.log("✅ success", result);
+          router.push(`/pembayaran/${pembayaranId}/konfirmasi`);
+        },
         onPending: (result: any) => console.log("⏳ pending", result),
         onError: (result: any) => console.error("❌ error", result),
         onClose: () => console.log("❎ popup closed"),
       });
+      
     }
   }, [showContent, snapToken, scriptLoaded]);
 
@@ -104,7 +116,6 @@ export default function PembayaranPage() {
     );
   }
 
-  // Log final values
   console.log("🎯 feeMetode:", pembayaran.feeMetode, typeof pembayaran.feeMetode);
   console.log("🎯 feePlatform:", pembayaran.feePlatform, typeof pembayaran.feePlatform);
   console.log("🎯 jumlahTotal:", pembayaran.jumlahTotal, typeof pembayaran.jumlahTotal);

@@ -71,6 +71,14 @@ export default function TambahTiketPage() {
     deskripsi: "",
     sebelahan: false,
   });
+  const [selectedJam, setSelectedJam] = useState("23:59"); // Default jam awal
+  const updateDetailWaktu = (jamString: string) => {
+    if (!detail.batas_waktu) return;
+    const [hh, mm] = jamString.split(":");
+    const date = new Date(detail.batas_waktu);
+    date.setHours(Number(hh), Number(mm), 0, 0);
+    setDetail({ ...detail, batas_waktu: date.toISOString() });
+  };
 
   const [loading, setLoading] = useState(false);
 
@@ -135,9 +143,9 @@ export default function TambahTiketPage() {
       jumlah: detail.jumlah,
       statusLelang: tipeJual === "LELANG" ? "BERLANGSUNG" : "SELESAI",
     };
-  
+
     console.log("🚀 Payload kirim tiket:", payload);
-  
+
     try {
       const res = await fetch("/api/ticket", {
         method: "POST",
@@ -146,15 +154,15 @@ export default function TambahTiketPage() {
         },
         body: JSON.stringify(payload),
       });
-  
+
       const result = await res.json();
-  
+
       console.log("✅ Response:", result);
-  
+
       if (!res.ok) {
         throw new Error(result.message || "Unknown error");
       }
-  
+
       toast.success("🎉 Tiket kamu berhasil di-launching!");
       router.push("/");
     } catch (err: any) {
@@ -162,7 +170,6 @@ export default function TambahTiketPage() {
       toast.error(`Gagal launching tiket: ${err.message || "Unknown error"}`);
     }
   };
-  
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -434,7 +441,7 @@ export default function TambahTiketPage() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-4 space-y-4">
                   <Calendar
                     mode="single"
                     selected={
@@ -453,17 +460,50 @@ export default function TambahTiketPage() {
                         return;
                       }
 
-                      // ⏰ Set jam ke 23:59
-                      const deadline = new Date(date);
-                      deadline.setHours(23, 59, 0, 0);
-
-                      setDetail({
-                        ...detail,
-                        batas_waktu: deadline.toISOString(),
-                      });
+                      const [hh, mm] = selectedJam.split(":");
+                      date.setHours(Number(hh), Number(mm), 0, 0);
+                      setDetail({ ...detail, batas_waktu: date.toISOString() });
                     }}
                     initialFocus
                   />
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Jam</label>
+                    <div className="flex gap-2">
+                      <select
+                        className="border border-input bg-background rounded-md p-2 text-sm"
+                        value={selectedJam.split(":")[0]}
+                        onChange={(e) => {
+                          const newJam = `${e.target.value}:${
+                            selectedJam.split(":")[1]
+                          }`;
+                          setSelectedJam(newJam);
+                          updateDetailWaktu(newJam);
+                        }}
+                      >
+                        {[...Array(24)].map((_, i) => {
+                          const val = i.toString().padStart(2, "0");
+                          return <option key={val}>{val}</option>;
+                        })}
+                      </select>
+
+                      <select
+                        className="border border-input bg-background rounded-md p-2 text-sm"
+                        value={selectedJam.split(":")[1]}
+                        onChange={(e) => {
+                          const newJam = `${selectedJam.split(":")[0]}:${
+                            e.target.value
+                          }`;
+                          setSelectedJam(newJam);
+                          updateDetailWaktu(newJam);
+                        }}
+                      >
+                        {["00", "15", "30", "45"].map((val) => (
+                          <option key={val}>{val}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
 

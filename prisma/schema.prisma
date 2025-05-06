@@ -49,6 +49,15 @@ model Konser {
   konserKategori KonserKategori[]
   tiket          Ticket[]
 }
+// prisma/schema.prisma
+model OtpLogin {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  createdAt DateTime @default(now())
+  isUsed    Boolean  @default(false)
+  expiresAt DateTime
+}
 
 model Kategori {
   id             Int              @id @default(autoincrement())
