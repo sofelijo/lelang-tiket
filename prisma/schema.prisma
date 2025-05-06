@@ -61,10 +61,10 @@ model Ticket {
   id               Int              @id @default(autoincrement())
   seat             String?
   tipeTempat       String
-  harga_awal       Int
+  harga_awal       Int?
   harga_beli       Int?
   kelipatan        Int?
-  batas_waktu      DateTime
+  batas_waktu      DateTime?
   deskripsi        String?
   perpanjangan_bid PerpanjanganBid?
   userId           Int?
@@ -96,28 +96,32 @@ model Bid {
 }
 
 model Pembayaran {
-  id                       Int                     @id @default(autoincrement())
-  order_id String?
+  id                       Int              @id @default(autoincrement())
+  order_id                 String?
   ticketId                 Int
   buyerId                  Int
-  metodePembayaran         MetodePembayaran
-  jumlahTotal              Int
+  snapMethod                   String?
+  feeMetode                Int?
+  jumlahTotal             Int
   kodeUnik                 Int?
   feePlatform              Int
-  statusPembayaran         StatusPembayaran        @default(PENDING)
+  statusPembayaran         StatusPembayaran @default(PENDING)
   tanggalTransferKePenjual DateTime?
-  metodePembayaranManualId Int?
-  createdAt                DateTime                @default(now())
-  updatedAt                DateTime                @updatedAt
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
   buktiPembayaran          String?
+  snapToken String? // menyimpan token Snap Midtrans
+
+    currentStep      Int      @default(1)
   qrisExpiredAt            DateTime?
-  qrisInvoiceId            String?
-  buyer                    User                    @relation(fields: [buyerId], references: [id])
-  metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
-  ticket                   Ticket                  @relation(fields: [ticketId], references: [id])
+  buyer                    User             @relation(fields: [buyerId], references: [id])
+  ticket                   Ticket           @relation(fields: [ticketId], references: [id])
 
   @@index([ticketId, buyerId])
 }
+
+//metodePembayaran         MetodePembayaran
+//metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
 
 model KonserKategori {
   id         Int      @id @default(autoincrement())
@@ -142,17 +146,17 @@ model Comment {
 }
 
 model MetodePembayaranManual {
-  id         Int          @id @default(autoincrement())
-  rekening   String?
-  deskripsi  String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  image      String?
-  nama       String
-  pembayaran Pembayaran[]
+  id        Int      @id @default(autoincrement())
+  rekening  String?
+  deskripsi String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  image     String?
+  nama      String
 }
 
 enum StatusLelang {
+  BOOKED
   PENDING
   BERLANGSUNG
   SELESAI

@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { pembayaranId } = await req.json();
+  const { pembayaranId, metode } = await req.json();
+  const metodeSnap = metode?.toLowerCase() || "bank_transfer";
 
   const pembayaran = await prisma.pembayaran.findUnique({
     where: { id: Number(pembayaranId) },
-  
     include: {
       ticket: {
         include: {
@@ -29,21 +29,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pembayaran atau tiket tidak ditemukan" }, { status: 404 });
   }
 
-  // Gunakan order_id dari tabel pembayaran
-  const orderId = pembayaran.order_id;
   const ticket = pembayaran.ticket;
-  const harga = ticket.harga_beli || 0;
-  const feePlatform = Math.max(Math.ceil(harga * 0.03), 27000); // minimal fee 27rb
-  const feeMidtrans = 10000;
-  const total = harga + feePlatform + feeMidtrans;
+  const hargaTiket = ticket.harga_beli || 0;
+  const rawPlatform = Math.ceil(hargaTiket * 0.03);
+  const feePlatform = Math.max(rawPlatform, 27000);
+
+  let feeMetode = 0;
+  if (metodeSnap === "credit_card") {
+    feeMetode = Math.ceil(hargaTiket * 0.05) + 5000;
+  } else if (metodeSnap === "qris") {
+    feeMetode = Math.ceil(hargaTiket * 0.01);
+  } else if (metodeSnap === "bank_transfer" || metodeSnap === "cstore") {
+    feeMetode = 10000;
+  }
+
+  const kodeUnik = Math.floor(100 + Math.random() * 900);
+  const total = hargaTiket + feePlatform + feeMetode + kodeUnik;
 
   const snap = new midtransClient.Snap({
     isProduction: false,
     serverKey: process.env.MIDTRANS_SERVER_KEY!,
   });
 
-  // Waktu mulai transaksi (buffer 1 menit)
-  const jakartaTime = new Date(Date.now() + 60_000).toLocaleString("en-US", {
+  const now = new Date();
+  const jakartaTime = now.toLocaleString("en-US", {
     timeZone: "Asia/Jakarta",
     year: "numeric",
     month: "2-digit",
@@ -54,28 +63,20 @@ export async function POST(req: NextRequest) {
     hour12: false,
   }).replace(",", "");
 
-  const [mm, dd, yyyy, hh, mi, ss] = jakartaTime
-    .match(/\d+/g)!
-    .map((v) => v.padStart(2, "0"));
+  const [mm, dd, yyyy, hh, mi, ss] = jakartaTime.match(/\d+/g)!.map((v) => v.padStart(2, "0"));
   const startTime = `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+  const expiredAt = new Date(now.getTime() + 30 * 60 * 1000);
 
-  // Update metode pembayaran menjadi "MIDTRANS"
-  await prisma.pembayaran.update({
-    where: { id: pembayaran.id },
-    data: {
-      metodePembayaran: "MIDTRANS",
-    },
-  });
-
-  const parameter = {
+  const parameter: any = {
     transaction_details: {
-      order_id: orderId,
+      order_id: pembayaran.order_id!,
       gross_amount: total,
     },
+    enabled_payments: [metodeSnap],
     item_details: [
       {
         id: `${ticket.id}`,
-        name: `Tiket Konser: ${ticket.konser.nama}`,
+        name: `Tiket ${ticket.konser.nama}`,
         quantity: 1,
         price: total,
       },
@@ -91,11 +92,41 @@ export async function POST(req: NextRequest) {
     },
   };
 
+  if (metodeSnap === "credit_card") {
+    parameter.credit_card = { secure: true };
+  }
+
   try {
     const transaction = await snap.createTransaction(parameter);
+
+    await prisma.$transaction([
+      prisma.pembayaran.update({
+        where: { id: pembayaran.id },
+        data: {
+          snapMethod: metodeSnap,
+          qrisExpiredAt: expiredAt,
+          feePlatform,
+          feeMetode,
+          kodeUnik,
+          jumlahTotal: total,
+          snapToken: transaction.token,
+
+        },
+      }),
+      prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { statusLelang: "BOOKED" },
+      }),
+    ]);
+
     return NextResponse.json({ token: transaction.token });
   } catch (error) {
     console.error("Midtrans Snap Error:", error);
     return NextResponse.json({ error: "Gagal membuat Snap Token" }, { status: 500 });
   }
+}
+
+function metodeToMidtrans(m: string): string {
+  // Fungsi ini masih boleh digunakan jika ingin map custom
+  return m;
 }

@@ -1,87 +1,125 @@
-// 📁 /app/api/payment/midtrans/va/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import axios from 'axios';
+// app/api/payment/midtrans/snap/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import midtransClient from "midtrans-client";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { ticketId, bank } = await req.json();
+  const { pembayaranId, metode } = await req.json();
 
-  if (!ticketId || !bank) {
-    return NextResponse.json({ error: 'ticketId and bank are required' }, { status: 400 });
+  const metodeValid = ["credit_card", "qris", "bank_transfer", "cstore"];
+  if (!metode || !metodeValid.includes(metode)) {
+    return NextResponse.json({ error: "Metode pembayaran tidak valid" }, { status: 400 });
   }
 
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
+  const pembayaran = await prisma.pembayaran.findUnique({
+    where: { id: Number(pembayaranId) },
     include: {
-      konser: true,
-      user: true,
+      ticket: {
+        include: {
+          konser: true,
+          user: true,
+        },
+      },
     },
   });
 
-  if (!ticket || !ticket.konser || !ticket.user) {
-    return NextResponse.json({ error: 'Invalid ticket or missing data' }, { status: 404 });
+  if (!pembayaran || !pembayaran.ticket) {
+    return NextResponse.json({ error: "Pembayaran atau tiket tidak ditemukan" }, { status: 404 });
   }
 
-  const timestamp = Date.now();
-  const orderId = `lelang-${ticket.konser.id}-${timestamp}`;
-  const grossAmount = (ticket.harga_beli || 0) + 27000; // Harga + fee minimum
+  const ticket = pembayaran.ticket;
+  const harga = ticket.harga_beli || 0;
+  const feePlatform = Math.max(Math.ceil(harga * 0.03), 27000);
 
-  const midtransPayload = {
-    payment_type: 'bank_transfer',
+  let feeMetode = 0;
+  if (metode === "credit_card") {
+    feeMetode = Math.ceil(harga * 0.05) + 5000;
+  } else if (metode === "qris") {
+    feeMetode = Math.ceil(harga * 0.01);
+  } else if (metode === "bank_transfer" || metode === "cstore") {
+    feeMetode = 10000;
+  }
+
+  const kodeUnik = Math.floor(100 + Math.random() * 900);
+  const total = harga + feePlatform + feeMetode + kodeUnik;
+
+  const snap = new midtransClient.Snap({
+    isProduction: false,
+    serverKey: process.env.MIDTRANS_SERVER_KEY!,
+  });
+
+  const jakartaTime = new Date(Date.now() + 60_000).toLocaleString("en-US", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).replace(",", "");
+
+  const [mm, dd, yyyy, hh, mi, ss] = jakartaTime.match(/\d+/g)!.map((v) => v.padStart(2, "0"));
+  const startTime = `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+  const expiredAt = new Date(`${startTime.replace(/-/g, "/").replace(" ", "T")}+07:00`).getTime() + 30 * 60 * 1000;
+
+  const parameter = {
     transaction_details: {
-      order_id: orderId,
-      gross_amount: grossAmount,
+      order_id: pembayaran.order_id,
+      gross_amount: total,
     },
-    bank_transfer: {
-      bank,
-    },
-    customer_details: {
-      first_name: ticket.user.name || 'Pengguna',
-      email: ticket.user.email || 'noemail@example.com',
-      phone: ticket.user.phoneNumber || '081234567890',
-    },
+    enabled_payments: [metode],
     item_details: [
       {
-        id: `ticket-${ticket.id}`,
-        name: `Tiket ${ticket.konser.nama}`,
-        price: ticket.harga_beli,
+        id: `${ticket.id}`,
+        name: `Tiket Konser: ${ticket.konser.nama}`,
         quantity: 1,
-      },
-      {
-        id: 'fee-platform',
-        name: 'Fee Platform',
-        price: 27000,
-        quantity: 1,
+        price: total,
       },
     ],
-    expiry: {
-      start_time: new Date().toISOString().slice(0, 19).replace('T', ' ') + ' +0700',
-      unit: 'minute',
-      duration: 30,
+    customer_details: {
+      first_name: ticket.user?.name || "User",
+      email: ticket.user?.email || "user@example.com",
     },
-    callbacks: {
-      finish: `${process.env.NEXT_PUBLIC_BASE_URL}/pembayaran/sukses`,
+    expiry: {
+      start_time: `${startTime} +0700`,
+      unit: "minute",
+      duration: 30,
     },
   };
 
   try {
-    const response = await axios.post('https://api.sandbox.midtrans.com/v2/charge', midtransPayload, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${Buffer.from(process.env.MIDTRANS_SERVER_KEY + ':').toString('base64')}`,
-      },
-    });
+    const transaction = await snap.createTransaction(parameter);
 
-    return NextResponse.json(response.data);
-  } catch (error: any) {
-    console.error('Midtrans error:', error.response?.data || error);
-    return NextResponse.json({ error: 'Failed to create VA payment' }, { status: 500 });
+    await prisma.$transaction([
+      prisma.pembayaran.update({
+        where: { id: pembayaran.id },
+        data: {
+          snapMethod: metode,
+          qrisExpiredAt: new Date(expiredAt),
+          feePlatform,
+          feeMetode,
+          kodeUnik,
+          jumlahTotal: total,
+        },
+      }),
+      prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { statusLelang: "BOOKED" },
+      }),
+    ]);
+
+    return NextResponse.json({ token: transaction.token });
+  } catch (error) {
+    console.error("Midtrans Snap Error:", error);
+    return NextResponse.json({ error: "Gagal membuat Snap Token" }, { status: 500 });
   }
 }

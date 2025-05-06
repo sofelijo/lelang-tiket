@@ -1,3 +1,4 @@
+//app/tambah-tiket/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,7 +12,7 @@ import TicketCard from "@/app/components/tickets/TicketCard";
 import TicketCardSkeleton from "@/app/components/tickets/TicketCardSkeleton";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { format, addDays } from "date-fns";
+import { format, addDays, setHours, setMinutes } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import {
   Popover,
@@ -19,11 +20,21 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-
-// ... imports tetap sama
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function TambahTiketPage() {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [konserList, setKonserList] = useState<any[]>([]);
@@ -109,15 +120,49 @@ export default function TambahTiketPage() {
     fetchKategori();
   }, [selectedKonser]);
 
-  const handleLaunch = () => {
-    if (!detail.jumlah || !detail.harga) {
-      toast.error("Jumlah dan harga tiket wajib diisi!");
-      return;
+  const handleLaunch = async () => {
+    const payload = {
+      konserId: selectedKonser?.id,
+      kategoriId: detail.kategoriId,
+      seat: detail.seat || null,
+      tipeTempat: detail.tipeTempat,
+      harga_awal: detail.harga_awal || null,
+      batas_waktu: detail.batas_waktu || null,
+      harga_beli: detail.harga_beli || null,
+      kelipatan: detail.kelipatan || null,
+      perpanjangan_bid: detail.perpanjangan_bid || null,
+      deskripsi: detail.deskripsi || "",
+      jumlah: detail.jumlah,
+      statusLelang: tipeJual === "LELANG" ? "BERLANGSUNG" : "SELESAI",
+    };
+  
+    console.log("🚀 Payload kirim tiket:", payload);
+  
+    try {
+      const res = await fetch("/api/ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      const result = await res.json();
+  
+      console.log("✅ Response:", result);
+  
+      if (!res.ok) {
+        throw new Error(result.message || "Unknown error");
+      }
+  
+      toast.success("🎉 Tiket kamu berhasil di-launching!");
+      router.push("/");
+    } catch (err: any) {
+      console.error("❌ Gagal launching tiket:", err);
+      toast.error(`Gagal launching tiket: ${err.message || "Unknown error"}`);
     }
-
-    toast.success("🎉 Tiket kamu udah tayang! Siap diserbu anak-anak konser!");
-    router.push("/");
   };
+  
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -399,20 +444,24 @@ export default function TambahTiketPage() {
                     }
                     onSelect={(date) => {
                       if (!date) return;
-                    
+
                       const max = addDays(new Date(), 7);
                       if (date > max) {
-                        toast.error("🚫 Jangan terlalu jauh yaa, max 7 hari aja 🤏");
+                        toast.error(
+                          "🚫 Jangan terlalu jauh yaa, max 7 hari aja 🤏"
+                        );
                         return;
                       }
-                    
+
                       // ⏰ Set jam ke 23:59
                       const deadline = new Date(date);
                       deadline.setHours(23, 59, 0, 0);
-                    
-                      setDetail({ ...detail, batas_waktu: deadline.toISOString() });
+
+                      setDetail({
+                        ...detail,
+                        batas_waktu: deadline.toISOString(),
+                      });
                     }}
-                    
                     initialFocus
                   />
                 </PopoverContent>
@@ -466,19 +515,20 @@ export default function TambahTiketPage() {
       )}
 
       {/* Step 4 */}
+
       {step === 4 && (
         <Card className="p-6 space-y-4">
           <h2 className="text-xl font-bold">4. Konfirmasi & Launching 🚀</h2>
-          <div className="text-sm">
+          <div className="text-sm space-y-2">
             <div>
-              🎤 <b>Konser:</b> {selectedKonser?.nama}
+              🎤 <b>Konser:</b> {selectedKonser?.nama} -{" "}
+              {kategoriList.find((k) => k.id === detail.kategoriId)?.nama ||
+                "Kategori tidak ditemukan"}
             </div>
             <div>
-              📅 <b>Tanggal:</b>{" "}
-              {new Date(selectedKonser?.tanggal).toLocaleDateString("id-ID")}
-            </div>
-            <div>
-              📍 <b>Lokasi:</b> {selectedKonser?.lokasi}
+              📍 <b>Tanggal & Lokasi:</b>{" "}
+              {new Date(selectedKonser?.tanggal).toLocaleDateString("id-ID")} —{" "}
+              {selectedKonser?.lokasi}
             </div>
             <div>
               💼 <b>Metode:</b>{" "}
@@ -488,14 +538,43 @@ export default function TambahTiketPage() {
               🎫 <b>Jumlah Tiket:</b> {detail.jumlah}
             </div>
             <div>
-              💸 <b>Harga:</b> Rp {Number(detail.harga).toLocaleString("id-ID")}
-            </div>
-            <div>
               🪑 <b>Tipe Tempat Duduk:</b> {detail.tipeTempat}
+              {detail.seat ? ` (${detail.seat})` : ""}
+              {detail.sebelahan ? " /sebelahan" : ""}
             </div>
-            {detail.seat && (
+
+            {tipeJual === "LELANG" ? (
+              <>
+                <div>
+                  💸 <b>Harga Awal:</b> Rp{" "}
+                  {Number(detail.harga_awal).toLocaleString("id-ID")}
+                </div>
+                <div>
+                  🪙 <b>Kelipatan:</b> Rp{" "}
+                  {Number(detail.kelipatan).toLocaleString("id-ID")}
+                </div>
+                <div>
+                  🛒 <b>Harga Beli Langsung:</b> Rp{" "}
+                  {Number(detail.harga_beli).toLocaleString("id-ID")}
+                </div>
+                <div>
+                  ⏰ <b>Batas Waktu:</b>{" "}
+                  {new Date(detail.batas_waktu).toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+                <div>
+                  🔁 <b>Perpanjangan Bid:</b> {detail.perpanjangan_bid}
+                </div>
+              </>
+            ) : (
               <div>
-                🔢 <b>Seat:</b> {detail.seat}
+                💸 <b>Harga Tiket:</b> Rp{" "}
+                {Number(detail.harga_beli).toLocaleString("id-ID")}
               </div>
             )}
           </div>
@@ -503,7 +582,32 @@ export default function TambahTiketPage() {
             <Button variant="outline" onClick={() => setStep(3)}>
               ⬅️ Balik
             </Button>
-            <Button onClick={handleLaunch}>Launch Sekarang 🔥</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="default">Launch Sekarang🔥</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    🚀 Yakin mau launching sekarang?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tiket bakal langsung tayang!
+                    <br />
+                    ⚠️ <b>Catatan:</b> Kalau ini lelang, gak bisa dihapus lagi
+                    setelah 1 jam ya 🫣
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="text-foreground border border-border bg-background hover:bg-muted">
+                    Batal
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={handleLaunch}>
+                    Oke Gas!
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </Card>
       )}

@@ -84,33 +84,11 @@ export default function TicketDetailPage() {
     }
   };
 
-  const handleBeliTiket = async () => {
+  const handleBeliTiket = () => {
     if (!ticket?.id) return;
-    setIsProcessing(true);
-
-    try {
-      const res = await fetch("/api/pembayaran/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticketId: ticket.id,
-          metodePembayaran: "QRIS_DINAMIS",
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        router.push(`/pembayaran/${data.id}`);
-      } else {
-        alert("Gagal membuat pembayaran: " + data.message);
-      }
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Terjadi kesalahan saat membuat pembayaran.");
-    } finally {
-      setIsProcessing(false);
-    }
+    router.push(`/bayar/${ticket.id}`);
   };
+  
 
   const statusColor =
     {
@@ -190,6 +168,25 @@ export default function TicketDetailPage() {
               </span>
             </p>
           </div>
+          <button
+                onClick={handleBeliTiket}
+                disabled={isProcessing}
+                className={`w-full transition px-4 py-3 rounded-lg font-bold text-lg ${
+                  isProcessing
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {isProcessing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin w-5 h-5" />
+                    Memproses...
+                  </span>
+                ) : (
+                  "Beli Tiket Sekarang"
+                )}
+              </button>
+
 
           {/* Form Penawaran + Tombol */}
           {ticket.statusLelang === "BERLANGSUNG" && (

@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from "react";
 import Banner from "@/app/components/lainnya/Banner";
-import SearchConcert from "@/app/components/lainnya/SearchConcert"
+import SearchConcert from "@/app/components/lainnya/SearchConcert";
 
-import { Card } from "@/components/ui/card"
+import { Card } from "@/components/ui/card";
 
 //import CommentSection from '@/app/components/CommentSection';
 
@@ -26,27 +26,25 @@ type Ticket = {
 };
 
 type Konser = {
-  id: number
-  nama: string
-  tanggal: string
+  id: number;
+  nama: string;
+  tanggal: string;
   tiket: {
-    id: number
-    tipeTempat: string
-    harga_awal: number
-    statusLelang: string
-  }[]
-}
-
+    id: number;
+    tipeTempat: string;
+    harga_awal: number;
+    statusLelang: string;
+  }[];
+};
 
 export default function Home() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [results, setResults] = useState<Konser[]>([])
+  const [results, setResults] = useState<Konser[]>([]);
 
   const handleSearchResults = (data: Konser[]) => {
-    setResults(data)
-  }
-
+    setResults(data);
+  };
 
   useEffect(() => {
     fetch("/api/ticket")
@@ -63,12 +61,10 @@ export default function Home() {
 
   return (
     <main className="p-6">
-
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Cari Konser</h1>
-
       </div>
-     
+
       <SearchConcert onSearch={handleSearchResults} />
 
       <div className="mt-4 space-y-4">
@@ -79,7 +75,8 @@ export default function Home() {
             <ul className="ml-4 list-disc">
               {konser.tiket.map((tiket) => (
                 <li key={tiket.id}>
-                  {tiket.tipeTempat} - Rp{tiket.harga_awal.toLocaleString()} ({tiket.statusLelang})
+                  {tiket.tipeTempat} - Rp{tiket.harga_awal.toLocaleString()} (
+                  {tiket.statusLelang})
                 </li>
               ))}
             </ul>
@@ -129,8 +126,12 @@ export default function Home() {
                 Seat: {ticket.seat} ({ticket.tipeTempat})
               </p>
               <p className="text-sm text-gray-300">
-                Harga Awal: Rp{ticket.harga_awal.toLocaleString()}
+                Harga Awal: Rp
+                {ticket.harga_awal !== null
+                  ? ticket.harga_awal.toLocaleString()
+                  : "-"}
               </p>
+
               <p className="text-sm text-gray-300">
                 Batas Waktu: {new Date(ticket.batas_waktu).toLocaleString()}
               </p>

@@ -1,0 +1,210 @@
+// app/pembayaran/[pembayaranId]/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Stepper } from "@/components/payment/Stepper";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import Script from "next/script";
+
+export default function PaymentPage() {
+  const router = useRouter();
+  const params = useParams();
+  const pembayaranId = typeof params?.["pembayaranId"] === "string" ? params["pembayaranId"] : "";
+
+  const [step, setStep] = useState(2);
+  const [metode, setMetode] = useState<"TRANSFER" | "QRIS_DINAMIS" | "CREDIT_CARD" | "CSTORE" | null>(null);
+  const [ticketInfo, setTicketInfo] = useState<any>(null);
+  const [kodeUnik, setKodeUnik] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [snapToken, setSnapToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const snapToMetode = (
+    m: string
+  ): "TRANSFER" | "QRIS_DINAMIS" | "CREDIT_CARD" | "CSTORE" => {
+    switch (m) {
+      case "bank_transfer":
+        return "TRANSFER";
+      case "qris":
+        return "QRIS_DINAMIS";
+      case "credit_card":
+        return "CREDIT_CARD";
+      case "cstore":
+        return "CSTORE";
+      default:
+        return "TRANSFER";
+    }
+  };
+  
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/pembayaran/${pembayaranId}`);
+        const data = await res.json();
+  
+        const metodeDB = snapToMetode(data.snapMethod || "bank_transfer");
+        setMetode(metodeDB);
+  
+        setTicketInfo({
+          id: data.ticket?.id,
+          namaKonser: data.ticket?.konser?.nama,
+          tanggal: new Date(data.ticket?.konser?.tanggal).toLocaleDateString("id-ID"),
+          jumlah: data.ticket?.jumlah,
+          tempat: data.ticket?.tipeTempat,
+          seat: data.ticket?.seat,
+          harga: data.ticket?.harga_beli,
+          feePlatform: data.feePlatform,
+          jumlahTotal: data.jumlahTotal,
+          kodeUnik: data.kodeUnik,
+         
+        });
+  
+        setKodeUnik(data.kodeUnik);
+  
+        if (data.qrisExpiredAt) {
+          const now = Date.now();
+          const expired = new Date(data.qrisExpiredAt).getTime();
+          const remaining = Math.floor((expired - now) / 1000);
+          setTimeLeft(remaining > 0 ? remaining : 0);
+        }
+  
+        // Snap token hanya dibuat jika belum ada
+        if (!snapToken && data.snapMethod) {
+          const snapRes = await fetch("/api/payment/midtrans/snap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pembayaranId, metode: data.snapMethod }),
+          });
+          const snapData = await snapRes.json();
+          if (snapData.token) setSnapToken(snapData.token);
+        }
+  
+        setLoading(false);
+      } catch (err) {
+        console.error("❌ Gagal ambil data pembayaran:", err);
+        setLoading(false);
+      }
+    };
+  
+    fetchData();
+  }, [pembayaranId]);
+  
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeLeft]);
+
+  useEffect(() => {
+    if (step >= 2 && snapToken && timeLeft <= 0) {
+      router.push("/");
+    }
+  }, [timeLeft, step, snapToken]);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
+    script.setAttribute("data-client-key", process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY!);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const formatRupiah = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(n);
+  const formatCountdown = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const metodeToSnap = (m: string) => {
+    switch (m) {
+      case "TRANSFER": return "bank_transfer";
+      case "QRIS_DINAMIS": return "qris";
+      case "CREDIT_CARD": return "credit_card";
+      case "CSTORE": return "cstore";
+      default: return "bank_transfer";
+    }
+  };
+
+  const feeMetode = ticketInfo?.metodeFee?.[metode || "TRANSFER"] ?? 0;
+  const totalBayar = (ticketInfo?.harga || 0) + (ticketInfo?.feePlatform || 0) + feeMetode + (ticketInfo?.kodeUnik || 0);
+
+  if (loading || !metode) {
+    return <div className="min-h-screen flex justify-center items-center"><Loader2 className="animate-spin w-6 h-6" /> Loading sob...</div>;
+  }
+
+  return (
+    <div className="max-w-xl mx-auto p-4">
+      {step >= 2 && (
+        <div className="text-center text-sm font-semibold text-red-500 mb-4">
+          ⏳ Selesaikan pembayaran dalam: {formatCountdown(timeLeft)}
+        </div>
+      )}
+
+      <Stepper step={step} />
+      <Separator className="my-4" />
+
+      {step === 2 && (
+        <Card className="p-4 space-y-4">
+          <h2 className="text-lg font-bold">2. Pembayaran</h2>
+
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between"><span>🎫 Harga Tiket:</span><span>{formatRupiah(ticketInfo.harga)}</span></div>
+            <div className="flex justify-between"><span>📦 Fee Platform:</span><span>{formatRupiah(ticketInfo.feePlatform)}</span></div>
+            <div className="flex justify-between"><span>💳 Fee Payment:</span><span>{formatRupiah(feeMetode)}</span></div>
+            <div className="text-xs text-muted-foreground italic pl-4">*tidak bisa di refund</div>
+            <div className="flex justify-between"><span>🔢 Kode Unik:</span><span>{ticketInfo.kodeUnik}</span></div>
+            <div className="flex justify-between font-bold"><span>💰 Total Bayar:</span><span>{formatRupiah(totalBayar)}</span></div>
+          </div>
+
+          <div id="midtrans-container" className="mt-4 w-full">
+            {snapToken && (
+              <Script
+                id="embed-snap"
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    window.snap.embed('${snapToken}', {
+                      embedId: 'midtrans-container',
+                      onSuccess: function(result){ console.log('✅ success', result); },
+                      onPending: function(result){ console.log('⏳ pending', result); },
+                      onError: function(result){ console.error('❌ error', result); },
+                      onClose: function(){ console.log('❎ popup closed'); }
+                    });
+                  `,
+                }}
+              />
+            )}
+          </div>
+
+          <Button className="w-full mt-4" onClick={() => setStep(3)}>Lanjut</Button>
+        </Card>
+      )}
+
+      {step === 3 && (
+        <Card className="p-4 space-y-4">
+          <h2 className="text-lg font-bold">3. Konfirmasi Admin</h2>
+          <p>Klik tombol di bawah buat konfirmasi ke WhatsApp admin.</p>
+          <Link href={`https://wa.me/6282143646463?text=Halo%20admin%2C%20aku%20udah%20bayar%20nih!`} target="_blank">
+            <Button className="w-full">Chat Admin di WhatsApp</Button>
+          </Link>
+        </Card>
+      )}
+
+      {step === 4 && (
+        <Card className="p-4 text-center space-y-2">
+          <h2 className="text-xl font-bold">4. Sabar ya!</h2>
+          <p className="text-sm">Pembayaran kamu lagi dicek nih. Tungguin maksimal 10 menit~</p>
+          <Button onClick={() => router.push("/")} className="mt-2">Balik ke Home</Button>
+        </Card>
+      )}
+    </div>
+  );
+}

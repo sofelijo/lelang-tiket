@@ -1,430 +1,157 @@
-//app/pembayaran/[pembayaranid]
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Stepper } from "@/components/payment/Stepper";
-import Image from "next/image";
-import Link from "next/link";
 import Script from "next/script";
 import { Loader2 } from "lucide-react";
-import { Pembayaran } from "@/lib/types";
 
-const BANK = {
-  nama: "Mandiri",
-  rekening: "1234567890",
-  atasNama: "Dhea Silvi",
-};
+export default function PembayaranPage() {
+  const { pembayaranId } = useParams() as { pembayaranId: string };
 
-const QRIS = {
-  image: "/qris.png",
-};
-
-const ADMIN_PHONE = "6282143646463";
-
-export default function PaymentPage() {
-  const params = useParams();
-  const pembayaranId =
-    typeof params?.["pembayaranId"] === "string" ? params["pembayaranId"] : "";
-
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [metode, setMetode] = useState<
-    "TRANSFER" | "QRIS_DINAMIS" | "MIDTRANS"
-  >("TRANSFER");
-  const [ticketInfo, setTicketInfo] = useState<any>(null);
-  const [kodeUnik, setKodeUnik] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [pembayaran, setPembayaran] = useState<any>(null);
   const [snapToken, setSnapToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [manualMetodeDipilih, setManualMetodeDipilih] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  const hargaTiket = ticketInfo?.harga || 1000000;
-  const rawFeePlatform = Math.ceil(hargaTiket * 0.03);
-  const feePlatform = Math.max(rawFeePlatform, 27000);
-  const isBelowMinimum = rawFeePlatform < 27000;
-  const feeQris = metode === "QRIS_DINAMIS" ? Math.ceil(hargaTiket * 0.01) : 0;
-  const feeMidtrans = metode === "MIDTRANS" ? 10000 : 0;
-  const total = hargaTiket + feePlatform + feeQris + feeMidtrans + kodeUnik;
-
-  const allowedMetodes = ["TRANSFER", "QRIS_DINAMIS", "MIDTRANS"];
-  if (!allowedMetodes.includes(metode)) setMetode("TRANSFER");
+  const formatRupiah = (n: number | string | null | undefined) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(Number(n) || 0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch(`/api/pembayaran/${pembayaranId}`);
         const data = await res.json();
+        console.log("📦 Data Pembayaran dari Backend:", data);
 
-        setTicketInfo({
-          id: data.ticket?.id,
-          namaKonser: data.ticket?.konser?.nama,
-          tanggal: new Date(data.ticket?.konser?.tanggal).toLocaleDateString(
-            "id-ID"
-          ),
-          jumlah: data.ticket?.jumlah,
-          tempat: data.ticket?.tipeTempat,
-          seat: data.ticket?.seat,
-          harga: data.ticket?.harga_beli,
-        });
+        setPembayaran(data);
 
-        // PERBAIKI BAGIAN INI
-        if (data.metodePembayaran && !manualMetodeDipilih) {
-          setMetode(data.metodePembayaran);
+        if (!data.snapToken) {
+          const snapRes = await fetch("/api/payment/midtrans/snap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pembayaranId: data.id,
+              metode: data.snapMethod,
+            }),
+          });
+          const snapData = await snapRes.json();
+          console.log("📦 Snap token baru:", snapData.token);
+
+          if (snapData.token) {
+            setSnapToken(snapData.token);
+
+            // 🔄 Fetch ulang data pembayaran setelah Snap dibuat
+            const refreshed = await fetch(`/api/pembayaran/${pembayaranId}`);
+            const refreshedData = await refreshed.json();
+            console.log("🔄 Data Pembayaran Setelah Snap:", refreshedData);
+            setPembayaran(refreshedData);
+          }
+        } else {
+          setSnapToken(data.snapToken);
         }
 
-        setKodeUnik(data.kodeUnik);
-
-        if (data.qrisExpiredAt) {
-          const now = Date.now();
-          const expired = new Date(data.qrisExpiredAt).getTime();
-          const remaining = Math.floor((expired - now) / 1000);
-          setTimeLeft(remaining > 0 ? remaining : 0);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Gagal mengambil data pembayaran", error);
+        // Delay 5 detik sebelum menampilkan UI
+        setTimeout(() => {
+          setShowContent(true);
+        }, 5000);
+      } catch (err) {
+        console.error("❌ Gagal mengambil pembayaran", err);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [pembayaranId]); // hanya tergantung id, bukan step!
+  }, [pembayaranId]);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeLeft]);
-
-  useEffect(() => {
-    if (timeLeft === 0 && step < 4) {
-      router.push("/");
+    console.log("💥 Coba embed Snap:", { showContent, snapToken, scriptLoaded });
+    if (
+      showContent &&
+      snapToken &&
+      scriptLoaded &&
+      typeof window !== "undefined" &&
+      (window as any).snap &&
+      document.getElementById("midtrans-container")
+    ) {
+      (window as any).snap.embed(snapToken, {
+        embedId: "midtrans-container",
+        onSuccess: (result: any) => console.log("✅ success", result),
+        onPending: (result: any) => console.log("⏳ pending", result),
+        onError: (result: any) => console.error("❌ error", result),
+        onClose: () => console.log("❎ popup closed"),
+      });
     }
-  }, [timeLeft, step]);
+  }, [showContent, snapToken, scriptLoaded]);
 
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-    script.setAttribute(
-      "data-client-key",
-      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY!
-    );
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  const formatRupiah = (amount: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(amount);
-
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
-  const whatsappMessage = `Halo admin, aku mau konfirmasi pembayaran ya!\n\nID Tiket: ${
-    ticketInfo?.id
-  }\nKonser: ${ticketInfo?.namaKonser}\nTotal Bayar: ${formatRupiah(
-    total
-  )}\n\nNama rekening pengirim: (tulis nama rekeningmu di sini)\n\nBukti transfer: (upload screenshot ya!)`;
-
-  const whatsappLink = `https://api.whatsapp.com/send/?phone=${ADMIN_PHONE}&text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
-
-  if (loading) {
+  if (loading || !pembayaran || !showContent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-sm text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          Memuat halaman pembayaran...
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <p className="text-sm text-muted-foreground">
+            Menyiapkan pembayaran, mohon tunggu...
+          </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto p-4">
-      {timeLeft > 0 ? (
-        <div className="text-center text-sm text-red-500 font-semibold mb-2">
-          ⏰ Selesaikan pembayaran dalam: {formatCountdown(timeLeft)}
-        </div>
-      ) : (
-        <div className="text-center text-sm text-red-600 font-bold mb-2">
-          ❌ Waktu pembayaran habis. Silakan kembali dan mulai ulang.
-        </div>
-      )}
+  // Log final values
+  console.log("🎯 feeMetode:", pembayaran.feeMetode, typeof pembayaran.feeMetode);
+  console.log("🎯 feePlatform:", pembayaran.feePlatform, typeof pembayaran.feePlatform);
+  console.log("🎯 jumlahTotal:", pembayaran.jumlahTotal, typeof pembayaran.jumlahTotal);
 
-      <Stepper step={step} />
+  return (
+    <div className="max-w-xl mx-auto p-4">
+      <Stepper step={2} />
       <Separator className="my-4" />
 
-      {/* Step 1 */}
-      {step === 1 && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-bold">1. Pilih Metode Pembayaran</h2>
-          <div className="text-sm space-y-1">
-            <div>🎤 {ticketInfo?.namaKonser}</div>
-            <div>📅 {ticketInfo?.tanggal}</div>
-            <div>
-              🎫 {ticketInfo?.jumlah} Tiket - {ticketInfo?.tempat} (
-              {ticketInfo?.seat})
-            </div>
-          </div>
-          <Separator className="my-4" />
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>💰 Harga Tiket:</span>
-              <span>{formatRupiah(ticketInfo?.harga)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>📦 Fee Platform:</span>
-              <span>{formatRupiah(feePlatform)}</span>
-            </div>
-            {isBelowMinimum && (
-              <div className="text-xs text-muted-foreground italic pl-4">
-                batas minimal 27 ribu
-              </div>
-            )}
-            {metode === "QRIS_DINAMIS" && (
-              <>
-                <div className="flex justify-between">
-                  <span>➕ Fee QRIS:</span>
-                  <span className="text-red-500">{formatRupiah(feeQris)}</span>
-                </div>
-                <div className="text-xs text-muted-foreground italic pl-4">
-                  *tidak bisa di refund
-                </div>
-              </>
-            )}
-            {metode === "MIDTRANS" && (
-              <>
-                <div className="flex justify-between">
-                  <span>➕ Fee Midtrans:</span>
-                  <span className="text-red-500">
-                    {formatRupiah(feeMidtrans)}
-                  </span>
-                </div>
-                <div className="text-xs text-muted-foreground italic pl-4">
-                  *tidak bisa di refund
-                </div>
-              </>
-            )}
-            <div className="flex justify-between">
-              <span>🔢 Kode Unik:</span>
-              <span>{kodeUnik}</span>
-            </div>
-            <div className="flex justify-between font-semibold">
-              <span>💳 Total Bayar:</span>
-              <span>{formatRupiah(total)}</span>
-            </div>
-            <div className="flex justify-end">
-              <div className="text-xs text-muted-foreground italic text-right">
-                harga yang ditransfer
-                <br />
-                <span className="text-red-500 font-medium">wajib sama</span>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-4">
-            <Button
-              variant={metode === "TRANSFER" ? "default" : "outline"}
-              onClick={() => {
-                setMetode("TRANSFER");
-                setManualMetodeDipilih(true);
-              }}
-            >
-              Transfer Bank (3%)
-            </Button>
+      <Card className="p-4 space-y-4">
+        <h2 className="text-lg font-bold">2. Pembayaran</h2>
 
-            <Button
-              variant={metode === "QRIS_DINAMIS" ? "default" : "outline"}
-              onClick={() => {
-                setMetode("QRIS_DINAMIS");
-                setManualMetodeDipilih(true);
-              }}
-            >
-              QRIS (4%)
-            </Button>
-
-            <Button
-              variant={metode === "MIDTRANS" ? "default" : "outline"}
-              onClick={() => {
-                setMetode("MIDTRANS");
-                setManualMetodeDipilih(true);
-              }}
-            >
-              Midtrans
-            </Button>
+        <div className="text-sm space-y-1">
+          <div className="flex justify-between">
+            <span>🎫 Harga Tiket:</span>
+            <span>{formatRupiah(pembayaran.ticket?.harga_beli)}</span>
           </div>
-          <div className="flex justify-end pt-4">
-            {metode === "MIDTRANS" ? (
-              <Button
-                onClick={async () => {
-                  try {
-                    const res = await fetch("/api/payment/midtrans/snap", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ pembayaranId: pembayaranId }), // GANTI INI
-                    });
-
-                    const data = await res.json();
-
-                    if (data.token) {
-                      setSnapToken(data.token);
-                      setStep(2);
-                    } else {
-                      alert(data.error || "Gagal membuat Snap token");
-                    }
-                  } catch (error) {
-                    alert("Terjadi kesalahan saat membuat Snap token");
-                  }
-                }}
-              >
-                Bayar via Midtrans
-              </Button>
-            ) : (
-              <Button onClick={() => setStep(2)}>Lanjut</Button>
-            )}
+          <div className="flex justify-between">
+            <span>📦 Fee Platform:</span>
+            <span>{formatRupiah(pembayaran.feePlatform)}</span>
           </div>
-        </Card>
-      )}
-
-      {/* Step 2 */}
-      {step === 2 && metode !== "MIDTRANS" && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-bold">2. Pembayaran</h2>
-          <div className="text-sm text-red-500 font-semibold">
-            Waktu tersisa untuk bayar: {formatCountdown(timeLeft)}
+          <div className="flex justify-between">
+            <span>💳 Fee Payment:</span>
+            <span>{formatRupiah(pembayaran.feeMetode)}</span>
           </div>
-
-          {/* TRANSFER */}
-          {metode === "TRANSFER" && (
-            <>
-              <div>Bank: {BANK.nama}</div>
-              <div className="flex items-center justify-between gap-2">
-                <span>Rekening: {BANK.rekening}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(BANK.rekening);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000); // reset setelah 2 detik
-                  }}
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </Button>
-              </div>
-              <div>Atas Nama: {BANK.atasNama}</div>
-            </>
-          )}
-
-          {/* QRIS */}
-          {metode === "QRIS_DINAMIS" && (
-            <Image src={QRIS.image} alt="QRIS" width={250} height={250} />
-          )}
-
-          <Separator />
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>💰 Harga Tiket:</span>
-              <span>{formatRupiah(ticketInfo?.harga)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>📦 Fee Platform:</span>
-              <span>{formatRupiah(feePlatform)}</span>
-            </div>
-            {metode === "QRIS_DINAMIS" && (
-              <>
-                <div className="flex justify-between">
-                  <span>➕ Fee QRIS:</span>
-                  <span className="text-red-500">{formatRupiah(feeQris)}</span>
-                </div>
-                <div className="text-xs text-muted-foreground italic pl-4">
-                  *tidak bisa di refund
-                </div>
-              </>
-            )}
-            <div className="flex justify-between">
-              <span>🔢 Kode Unik:</span>
-              <span>{kodeUnik}</span>
-            </div>
-            <div className="flex justify-between font-semibold">
-              <span>💳 Total Bayar:</span>
-              <span>{formatRupiah(total)}</span>
-            </div>
+          <div className="flex justify-between">
+            <span>🔢 Kode Unik:</span>
+            <span>{pembayaran.kodeUnik}</span>
           </div>
-          <div className="flex justify-end">
-            <div className="text-xs text-muted-foreground italic text-right">
-              harga yang ditransfer
-              <br />
-              <span className="text-red-500 font-medium">wajib sama</span>
-            </div>
+          <div className="flex justify-between font-bold">
+            <span>💰 Total Bayar:</span>
+            <span>{formatRupiah(pembayaran.jumlahTotal)}</span>
           </div>
-          <Separator />
-          <div className="text-sm space-y-1">
-            <div>🎤 {ticketInfo?.namaKonser}</div>
-            <div>📅 {ticketInfo?.tanggal}</div>
-            <div>
-              🎫 {ticketInfo?.jumlah} Tiket - {ticketInfo?.tempat} (
-              {ticketInfo?.seat})
-            </div>
-          </div>
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setStep(1)}>
-              Kembali
-            </Button>
-            <Button onClick={() => setStep(3)}>Lanjut</Button>
-          </div>
-        </Card>
-      )}
+        </div>
 
-      {step === 3 && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-bold">3. Konfirmasi Pembayaran</h2>
-          <p className="text-sm">
-            Klik tombol di bawah untuk konfirmasi via WhatsApp.
-          </p>
-          <Link href={whatsappLink} target="_blank">
-            <Button className="w-full">Konfirmasi via WhatsApp</Button>
-          </Link>
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setStep(2)}>
-              Kembali
-            </Button>
-            <Button onClick={() => setStep(4)}>Saya Sudah Bayar</Button>
-          </div>
-        </Card>
-      )}
+        <div id="midtrans-container" className="mt-4 w-full min-h-[300px]" />
 
-      {step === 4 && (
-        <Card className="p-6 space-y-4 text-center">
-          <h2 className="text-xl font-bold">4. Menunggu Konfirmasi</h2>
-          <p className="text-sm">
-            Pembayaranmu sedang diproses. Mohon tunggu maksimal 10 menit.
-          </p>
-          <Button onClick={() => router.push("/")} className="mt-4">
-            Kembali ke Beranda
-          </Button>
-        </Card>
-      )}
+        <Script
+          id="midtrans-script"
+          src="https://app.sandbox.midtrans.com/snap/snap.js"
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+          onLoad={() => {
+            console.log("🚀 Snap.js loaded");
+            setScriptLoaded(true);
+          }}
+        />
+      </Card>
     </div>
   );
 }
