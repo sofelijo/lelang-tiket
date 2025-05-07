@@ -1,9 +1,36 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import LogoutButton from './LogoutButton';
+"use client";
 
-export default async function NavbarServer() {
-  const session = await getServerSession(authOptions);
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+export default function NavbarWrapper() {
+  const pathname = usePathname();
+  const [shouldShow, setShouldShow] = useState(false);
+
+  useEffect(() => {
+    if (pathname && !pathname.startsWith("/admin")) {
+      setShouldShow(true);
+    } else {
+      setShouldShow(false);
+    }
+  }, [pathname]);
+
+  if (!shouldShow) return null;
+
+  return <NavbarClient />;
+}
+
+function NavbarClient() {
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchSession() {
+      const res = await fetch("/api/auth/session");
+      const data = await res.json();
+      if (Object.keys(data).length > 0) setSession(data);
+    }
+    fetchSession();
+  }, []);
 
   return (
     <nav className="bg-gray-900 text-white p-4 flex justify-between items-center">
@@ -18,7 +45,7 @@ export default async function NavbarServer() {
             <a href="/profile" className="hover:underline">
               👤 {session.user.name || 'Profil'}
             </a>
-            <LogoutButton />
+            <a href="/logout" className="text-red-400 hover:underline">Logout</a>
           </>
         ) : (
           <a href="/login" className="hover:underline">Login</a>

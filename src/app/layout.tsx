@@ -1,8 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/lainnya/NavbarServer";
-import SessionProviderClient from "@/app/components/lainnya/SessionProviderClient"; // 👈 tambahkan ini
+import SessionProviderClient from "@/app/components/lainnya/SessionProviderClient";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -32,7 +33,8 @@ export default function RootLayout({
       >
         <SessionProviderClient>
           <Navbar />
-          <main className="p-4 max-w-5xl mx-auto">{children}</main>
+          {/* 🟢 HAPUS max-w-5xl supaya admin bisa full width */}
+          <main className="">{children}</main>
         </SessionProviderClient>
         <Toaster />
       </body>
