@@ -1,3 +1,5 @@
+// types/next-auth.d.ts
+
 import NextAuth from "next-auth";
 
 declare module "next-auth" {
@@ -8,14 +10,16 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role?: string;
-      phoneNumber?: string; // ✅ Tambahan untuk WhatsApp login
+      phoneNumber?: string;
+      isVerified?: boolean; // ✅ Tambahan untuk verifikasi nomor WA
     };
   }
 
   interface User {
     id: string;
     role?: string;
-    phoneNumber?: string; // ✅ Tambahan agar bisa diakses dari JWT
+    phoneNumber?: string;
+    isVerified?: boolean; // ✅ Agar tersedia saat signIn
   }
 }
 
@@ -23,6 +27,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     sub: string;
     role?: string;
-    phoneNumber?: string; // ✅ Tambahan supaya token bisa bawa nomor WA
+    phoneNumber?: string;
+    isVerified?: boolean; // ✅ Tambahan supaya bisa dibawa di token
   }
 }

@@ -10,6 +10,7 @@ interface TicketCardProps {
   namaKonser: string;
   tanggal: string;
   lokasi?: string;
+  
   jumlahTiket?: number;
   tipeTempat?: string;
   harga?: number;

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import LogoutButton from './LogoutButton';
 
 export default function NavbarWrapper() {
   const pathname = usePathname();
@@ -45,7 +46,7 @@ function NavbarClient() {
             <a href="/profile" className="hover:underline">
               👤 {session.user.name || 'Profil'}
             </a>
-            <a href="/logout" className="text-red-400 hover:underline">Logout</a>
+            <LogoutButton />
           </>
         ) : (
           <a href="/login" className="hover:underline">Login</a>

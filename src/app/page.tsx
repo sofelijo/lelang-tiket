@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import Banner from "@/app/components/lainnya/Banner";
-import SearchConcert from "@/app/components/lainnya/SearchConcert";
 
 import { Card } from "@/components/ui/card";
 
@@ -65,7 +64,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold mb-4">Cari Konser</h1>
       </div>
 
-      <SearchConcert onSearch={handleSearchResults} />
+     
 
       <div className="mt-4 space-y-4">
         {results.map((konser) => (

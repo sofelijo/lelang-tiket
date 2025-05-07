@@ -1,9 +1,10 @@
+// 📁 src/app/api/auth/request-wa-login/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 
-const WABLAS_TOKEN = process.env.WABLAS_TOKEN!;
-const WABLAS_URL = "https://console.wablas.com/api/send-message";
+const WABLAS_URL = "https://bdg.wablas.com/api/v2/send-message";
 
 function generateOTP(length = 6) {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -13,13 +14,13 @@ export async function POST(req: NextRequest) {
   const { phone } = await req.json();
 
   if (!phone || !phone.startsWith("62")) {
-    return NextResponse.json({ error: "Nomor WA tidak valid" }, { status: 400 });
+    return NextResponse.json({ error: "Nomor tidak valid" }, { status: 400 });
   }
 
   const code = generateOTP();
 
   try {
-    // Simpan ke DB
+    // 1. Simpan ke database
     await prisma.otpLogin.create({
       data: {
         phone,
@@ -28,25 +29,35 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Kirim via Wablas
-    const message = `Kode login MOMEN kamu: ${code}.\nBerlaku 5 menit yaa. Jangan kasih ke siapa pun!`;
+    // 2. Kirim ke Wablas (data array dibungkus dengan { data: [...] })
+    const message = `Kode login MOMEN kamu: ${code}.\nBerlaku 5 menit yaa ✨`;
 
-    await axios.post(
-      WABLAS_URL,
-      {
-        phone,
-        message,
-      },
-      {
-        headers: {
-          Authorization: WABLAS_TOKEN,
+    const payload = {
+      data: [
+        {
+          phone,
+          message,
         },
-      }
-    );
+      ],
+    };
 
-    return NextResponse.json({ success: true });
+    const response = await axios.post(WABLAS_URL, payload, {
+      headers: {
+        Authorization: process.env.WABLAS_TOKEN!, // isi dari dashboard Wablas
+        "Content-Type": "application/json",
+        // Jika pakai secret-key:
+        // 'secret-key': process.env.WABLAS_SECRET_KEY!,
+      },
+    });
+
+    if (!response.data.status) {
+      console.error("⚠️ Wablas error:", response.data);
+      return NextResponse.json({ error: "Gagal kirim OTP ke WhatsApp" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "OTP berhasil dikirim!" });
   } catch (err) {
     console.error("❌ Gagal kirim WA:", err);
-    return NextResponse.json({ error: "Gagal kirim WhatsApp" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal mengirim WhatsApp" }, { status: 500 });
   }
 }

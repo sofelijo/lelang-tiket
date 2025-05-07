@@ -8,6 +8,7 @@ interface TicketCardProps {
   jumlahTiket?: number;
   tipeTempat?: string;
   harga?: number;
+  venue? : string;
   onClick?: () => void;
   className?: string;
 }
@@ -19,6 +20,7 @@ export default function TicketCard({
   jumlahTiket,
   tipeTempat,
   harga,
+  venue,
   onClick,
   className,
 }: TicketCardProps) {
@@ -37,7 +39,7 @@ export default function TicketCard({
       {lokasi && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
           <MapPin className="w-4 h-4" />
-          <span>{lokasi}</span>
+          <span>{venue}-{lokasi}</span>
         </div>
       )}
 
@@ -45,7 +47,7 @@ export default function TicketCard({
         <div className="text-sm text-muted-foreground flex items-center gap-2">
           <Ticket className="w-4 h-4" />
           <span>
-            {jumlahTiket} tiket - {tipeTempat}
+            {jumlahTiket} tiket 
           </span>
         </div>
       )}

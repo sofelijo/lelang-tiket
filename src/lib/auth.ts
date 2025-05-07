@@ -1,3 +1,5 @@
+// src/lib/auth.ts
+
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -10,7 +12,7 @@ export const authOptions: AuthOptions = {
   providers: [
     // 🔐 Login Email & Password
     CredentialsProvider({
-      id: "credentials", // default
+      id: "credentials",
       name: 'Login Email',
       credentials: {
         email: { label: 'Email', type: 'text' },
@@ -18,17 +20,16 @@ export const authOptions: AuthOptions = {
       },
       authorize: async (credentials) => {
         if (!credentials) return null;
-      
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-      
+
         if (!user || !credentials.password) return null;
-      
-        const passwordMatch = await bcrypt.compare(credentials.password, user.password || '');
+
+        const passwordMatch = await bcrypt.compare(credentials.password || '', user.password || '');
         if (!passwordMatch) return null;
-      
-        // 🔧 Ubah semua null → undefined agar cocok dengan type NextAuth.User
+
         return {
           id: String(user.id),
           name: user.name ?? undefined,
@@ -38,7 +39,6 @@ export const authOptions: AuthOptions = {
           phoneNumber: user.phoneNumber ?? undefined,
         };
       }
-      
     }),
 
     // 📲 Login via WhatsApp OTP
@@ -51,7 +51,7 @@ export const authOptions: AuthOptions = {
       },
       authorize: async (credentials) => {
         if (!credentials || !credentials.phone || !credentials.code) return null;
-      
+
         const otp = await prisma.otpLogin.findFirst({
           where: {
             phone: credentials.phone,
@@ -60,18 +60,18 @@ export const authOptions: AuthOptions = {
             expiresAt: { gt: new Date() },
           },
         });
-      
+
         if (!otp) return null;
-      
+
         await prisma.otpLogin.update({
           where: { id: otp.id },
           data: { isUsed: true },
         });
-      
+
         let user = await prisma.user.findUnique({
           where: { phoneNumber: credentials.phone },
         });
-      
+
         if (!user) {
           user = await prisma.user.create({
             data: {
@@ -83,37 +83,40 @@ export const authOptions: AuthOptions = {
             },
           });
         }
-      
+
         return {
           id: String(user.id),
           name: user.name ?? undefined,
           email: user.email ?? undefined,
           role: user.role,
           isVerified: user.isVerified,
-          phoneNumber: user.phoneNumber ?? undefined, // ✅ FIX
+          phoneNumber: user.phoneNumber ?? undefined,
         };
       }
-      
     }),
   ],
+
   callbacks: {
-    async session({ session, token }) {
-      if (token && session.user) {
-        if (!token.sub) throw new Error('Token tidak memiliki sub');
-        session.user.id = token.sub ?? '';
-        session.user.role = typeof token.role === 'string' ? token.role : '';
-        session.user.phoneNumber = token.phoneNumber ?? '';
-      }
-      return session;
-    },
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.phoneNumber = (user as any).phoneNumber;
+        token.role = user.role;
+        token.phoneNumber = user.phoneNumber;
+        token.isVerified = user.isVerified;
       }
       return token;
     },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub ?? '';
+        session.user.role = token.role as string;
+        session.user.phoneNumber = token.phoneNumber as string;
+        session.user.isVerified = token.isVerified as boolean;
+      }
+      return session;
+    },
   },
+
   pages: {
     signIn: '/login',
   },
