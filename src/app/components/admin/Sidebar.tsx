@@ -31,6 +31,9 @@ export function Sidebar() {
         >
           Kelola User
         </Link>
+        <Link href="/admin/kategori" className="hover:text-blue-600">Kelola Kategori</Link>
+        <Link href="/admin/tiket-lelang" className="hover:text-blue-600">Tiket Lelang</Link>
+        <Link href="/admin/tiket-jual" className="hover:text-blue-600">Tiket Jual</Link>
       </nav>
     </div>
   );
