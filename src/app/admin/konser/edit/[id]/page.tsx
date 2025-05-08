@@ -1,3 +1,4 @@
+// src/app/admin/konser/[id]/edit/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import ImageUpload from "@/app/components/admin/ImageUpload";
 
 export default function EditKonserPage() {
   const params = useParams();
   const router = useRouter();
-
   const konserId = typeof params?.id === "string" ? parseInt(params.id) : null;
 
   const [form, setForm] = useState({
@@ -19,6 +20,7 @@ export default function EditKonserPage() {
     tanggal: "",
     venue: "",
     kategoriIds: [] as number[],
+    image: null as string | null,
   });
 
   const [kategoriList, setKategoriList] = useState<{ id: number; nama: string }[]>([]);
@@ -35,6 +37,7 @@ export default function EditKonserPage() {
           tanggal: data.tanggal.slice(0, 10),
           venue: data.venue || "",
           kategoriIds: data.konserKategori.map((k: any) => k.kategoriId),
+          image: data.image || null,
         });
       });
 
@@ -63,63 +66,76 @@ export default function EditKonserPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
-      <h2 className="text-2xl font-bold text-white">Edit Konser</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label className="text-white">Nama</Label>
-          <Input
-            type="text"
-            required
-            value={form.nama}
-            onChange={(e) => setForm({ ...form, nama: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label className="text-white">Lokasi</Label>
-          <Input
-            type="text"
-            required
-            value={form.lokasi}
-            onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label className="text-white">Tanggal</Label>
-          <Input
-            type="date"
-            required
-            value={form.tanggal}
-            onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label className="text-white">Venue</Label>
-          <Input
-            type="text"
-            value={form.venue}
-            onChange={(e) => setForm({ ...form, venue: e.target.value })}
-          />
-        </div>
+    <div className="max-w-4xl mx-auto text-white space-y-6">
+      <h2 className="text-2xl font-bold mb-4">Edit Konser</h2>
 
-        <div>
-          <Label className="text-white mb-2 block">Kategori</Label>
-          <div className="flex flex-col gap-2">
-            {kategoriList.map((kategori) => (
-              <label key={kategori.id} className="flex items-center gap-2 text-white">
-                <Checkbox
-                  checked={form.kategoriIds.includes(kategori.id)}
-                  onCheckedChange={() => toggleKategori(kategori.id)}
-                />
-                {kategori.nama}
-              </label>
-            ))}
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Kolom kiri: Upload Gambar */}
+          <div>
+            <ImageUpload
+              onChange={(base64) => setForm((prev) => ({ ...prev, image: base64 }))}
+              initialImage={form.image}
+            />
+          </div>
+
+          {/* Kolom kanan: Form */}
+          <div className="space-y-4">
+            <div>
+              <Label>Nama</Label>
+              <Input
+                type="text"
+                required
+                value={form.nama}
+                onChange={(e) => setForm({ ...form, nama: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Lokasi</Label>
+              <Input
+                type="text"
+                required
+                value={form.lokasi}
+                onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Tanggal</Label>
+              <Input
+                type="date"
+                required
+                value={form.tanggal}
+                onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Venue</Label>
+              <Input
+                type="text"
+                value={form.venue}
+                onChange={(e) => setForm({ ...form, venue: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 block">Kategori</Label>
+              <div className="flex flex-col gap-2">
+                {kategoriList.map((kategori) => (
+                  <label key={kategori.id} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.kategoriIds.includes(kategori.id)}
+                      onCheckedChange={() => toggleKategori(kategori.id)}
+                    />
+                    {kategori.nama}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              Simpan Perubahan
+            </Button>
           </div>
         </div>
-
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-          Simpan Perubahan
-        </Button>
       </form>
     </div>
   );

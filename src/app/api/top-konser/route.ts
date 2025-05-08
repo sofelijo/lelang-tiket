@@ -16,6 +16,7 @@ export async function GET() {
         tanggal: k.tanggal,
         lokasi: k.lokasi,
         venue : k.venue,
+        image : k.image,
         jumlahTiket: k.tiket.length,
         tipeTempat: k.tiket[0]?.tipeTempat ?? "berdiri",
       }))

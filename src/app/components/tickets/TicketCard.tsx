@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Calendar, MapPin, Ticket } from "lucide-react";
+import Image from "next/image";
 
 interface TicketCardProps {
   namaKonser: string;
@@ -8,7 +9,8 @@ interface TicketCardProps {
   jumlahTiket?: number;
   tipeTempat?: string;
   harga?: number;
-  venue? : string;
+  venue?: string;
+  image?: string | null; // ✅ tambahkan prop image
   onClick?: () => void;
   className?: string;
 }
@@ -21,42 +23,54 @@ export default function TicketCard({
   tipeTempat,
   harga,
   venue,
+  image,
   onClick,
   className,
 }: TicketCardProps) {
   return (
     <Card
       onClick={onClick}
-      className={`p-4 flex flex-col gap-2 hover:shadow-lg transition-all duration-200 ease-in-out rounded-2xl cursor-pointer ${className}`}
+      className={`flex flex-row w-full overflow-hidden hover:shadow-lg transition-all duration-200 ease-in-out rounded-2xl cursor-pointer ${className}`}
     >
-      <div className="text-lg font-bold">{namaKonser}</div>
-
-      <div className="text-sm text-muted-foreground flex items-center gap-2">
-        <Calendar className="w-4 h-4" />
-        <span>{tanggal}</span>
+      {/* Gambar kiri (1/3) */}
+      <div className="w-1/3 relative aspect-square bg-gray-200">
+        {image ? (
+          <Image
+            src={image}
+            alt={`Gambar konser ${namaKonser}`}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+            No Image
+          </div>
+        )}
       </div>
 
-      {lokasi && (
-        <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          <span>{venue}-{lokasi}</span>
-        </div>
-      )}
+      {/* Konten kanan (2/3) */}
+      <div className="w-2/3 p-4 flex flex-col justify-center gap-2">
+        <div className="text-lg font-bold flex line-clamp-1">{namaKonser}</div>
 
-      {jumlahTiket !== undefined && tipeTempat && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <Ticket className="w-4 h-4" />
-          <span>
-            {jumlahTiket} tiket 
-          </span>
+          <Calendar className="w-4 h-4" />
+          <span>{tanggal}</span>
         </div>
-      )}
 
-      {harga !== undefined && (
-        <div className="text-base font-semibold text-green-600">
-          Rp {harga.toLocaleString("id-ID")}
-        </div>
-      )}
+        {lokasi && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            <span>{venue ?? "-"} </span>
+          </div>
+        )}
+
+        {harga !== undefined && (
+          <div className="text-base font-semibold text-green-600 mt-2">
+            Rp {harga.toLocaleString("id-ID")}
+          </div>
+        )}
+      </div>
     </Card>
   );
+
 }

@@ -1,3 +1,4 @@
+// src/app/admin/konser/tambah/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -20,6 +21,7 @@ export default function TambahKonserPage() {
     tanggal: "",
     venue: "",
     kategoriIds: [] as number[],
+    image: null as string | null, // ← tambahkan image di state
   });
   const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
 
@@ -56,7 +58,7 @@ export default function TambahKonserPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Kolom kiri: Upload Gambar */}
           <div>
-            <ImageUpload />
+            <ImageUpload onChange={(base64) => setForm((f) => ({ ...f, image: base64 }))} />
           </div>
 
           {/* Kolom kanan: Form Input */}

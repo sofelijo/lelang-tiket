@@ -1,6 +1,7 @@
+// src/app/components/admin/ImageUpload.tsx
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,12 +14,25 @@ interface CroppedArea {
   y: number;
 }
 
-export default function ImageUpload() {
+export default function ImageUpload({
+  onChange,
+  initialImage,
+}: {
+  onChange: (base64: string | null) => void;
+  initialImage?: string | null;
+}) {
   const [image, setImage] = useState<string | null>(null);
-  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [croppedImage, setCroppedImage] = useState<string | null>(initialImage || null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedArea | null>(null);
+
+  useEffect(() => {
+    if (initialImage) {
+      setCroppedImage(initialImage);
+      setImage(null); // pastikan cropper tidak muncul langsung
+    }
+  }, [initialImage]);
 
   const onCropComplete = useCallback(
     (_: CroppedArea, croppedAreaPixels: CroppedArea) => {
@@ -32,6 +46,7 @@ export default function ImageUpload() {
     if (file) {
       setImage(URL.createObjectURL(file));
       setCroppedImage(null);
+      onChange(null);
     }
   };
 
@@ -61,7 +76,9 @@ export default function ImageUpload() {
       if (blob) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setCroppedImage(reader.result as string);
+          const base64 = reader.result as string;
+          setCroppedImage(base64);
+          onChange(base64);
         };
         reader.readAsDataURL(blob);
       }
@@ -71,6 +88,7 @@ export default function ImageUpload() {
   const resetImage = () => {
     setImage(null);
     setCroppedImage(null);
+    onChange(null);
     setCroppedAreaPixels(null);
     setZoom(1);
     setCrop({ x: 0, y: 0 });

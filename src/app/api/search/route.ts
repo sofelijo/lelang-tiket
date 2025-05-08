@@ -1,4 +1,4 @@
-// 📁 src/app/api/search/route.ts
+// ✅ src/app/api/search/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,24 +6,26 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query");
 
-  if (!query) {
-    return NextResponse.json({ konser: [] });
+  if (!query || typeof query !== "string") {
+    return NextResponse.json({ error: "Invalid query" }, { status: 400 });
   }
 
-  const konser = await prisma.konser.findMany({
-    where: {
-      nama: {
-        contains: query,
-        mode: "insensitive",
+  try {
+    const konserList = await prisma.konser.findMany({
+      where: {
+        nama: {
+          contains: query,
+          mode: "insensitive",
+        },
       },
-    },
-    select: {
-      id: true,
-      nama: true,
-      tanggal: true,
-      lokasi: true,
-    },
-  });
+      include: {
+        tiket: true, // ✅ include relasi tiket
+      },
+    });
 
-  return NextResponse.json({ konser });
+    return NextResponse.json(konserList);
+  } catch (error) {
+    console.error("Gagal ambil data konser:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

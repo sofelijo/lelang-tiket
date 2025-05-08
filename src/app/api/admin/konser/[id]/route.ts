@@ -18,12 +18,16 @@ export async function GET(_: NextRequest, { params }: Params) {
 
   return NextResponse.json(konser);
 }
+  
+// app/api/admin/konser/[id]/route.ts
+
 
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const id = parseInt(params.id);
-    const { nama, lokasi, tanggal, venue, kategoriIds } = await req.json();
+    const { nama, lokasi, tanggal, venue, kategoriIds, image } = await req.json();
 
+    // 1. Update data konser (termasuk gambar)
     const konser = await prisma.konser.update({
       where: { id },
       data: {
@@ -31,13 +35,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
         lokasi,
         tanggal: new Date(tanggal),
         venue,
+        image, // ✅ tambahkan image di sini
         konserKategori: {
-          deleteMany: {}, // hapus semua kategori dulu
+          deleteMany: {}, // hapus semua kategori lama
         },
       },
     });
 
-    // Insert ulang kategori
+    // 2. Tambahkan ulang relasi kategori
     if (Array.isArray(kategoriIds)) {
       await prisma.konserKategori.createMany({
         data: kategoriIds.map((kategoriId: number) => ({

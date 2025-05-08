@@ -1,10 +1,10 @@
 // app/api/admin/konser/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";  
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { nama, tanggal, lokasi, venue, kategoriIds } = await req.json();
+    const { nama, tanggal, lokasi, venue, kategoriIds, image } = await req.json();
 
     const konser = await prisma.konser.create({
       data: {
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
         tanggal: new Date(tanggal),
         lokasi,
         venue,
+        image,
         konserKategori: {
           create: kategoriIds.map((kategoriId: number) => ({
             kategori: { connect: { id: kategoriId } },
