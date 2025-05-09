@@ -94,7 +94,7 @@ export default function TiketByKonserPage() {
           <img
             src={konser.image}
             alt="banner konser"
-            className="w-full h-48 object-cover"
+            className="w-full h-100 object-cover"
           />
           <div className="p-4 space-y-2">
             <h1 className="text-xl font-bold">{konser.nama}</h1>
