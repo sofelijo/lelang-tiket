@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProfileSidebar } from "@/app/components/profile/ProfileSidebar";
 
 type Wilayah = { kode: string; nama: string };
 
@@ -36,7 +37,7 @@ export default function ProfilePage() {
     kecamatanId: "",
     kelurahanId: "",
     image: null as File | string | null,
-    username: "", // <--- tambah ini,
+    username: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -44,8 +45,8 @@ export default function ProfilePage() {
   const [kotaList, setKotaList] = useState<Wilayah[]>([]);
   const [kecamatanList, setKecamatanList] = useState<Wilayah[]>([]);
   const [kelurahanList, setKelurahanList] = useState<Wilayah[]>([]);
+  const [isVerified, setIsVerified] = useState(false);
 
-  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       if (session?.user?.id) {
@@ -72,25 +73,21 @@ export default function ProfilePage() {
           kecamatanId: kecamatan,
           kelurahanId: kelurahan,
           image: data.image || null,
-          username: data.username || "", // <--- ambil dari API
+          username: data.username || "",
         });
 
+        setIsVerified(!!data.phoneVerified);
+
         if (provinsi) {
-          const kotaData = await fetch(
-            `/api/wilayah/kota?provinsiId=${provinsi}`
-          ).then((r) => r.json());
+          const kotaData = await fetch(`/api/wilayah/kota?provinsiId=${provinsi}`).then((r) => r.json());
           setKotaList(kotaData);
         }
         if (kota) {
-          const kecData = await fetch(
-            `/api/wilayah/kecamatan?kotaId=${kota}`
-          ).then((r) => r.json());
+          const kecData = await fetch(`/api/wilayah/kecamatan?kotaId=${kota}`).then((r) => r.json());
           setKecamatanList(Array.isArray(kecData) ? kecData : kecData.data);
         }
         if (kecamatan) {
-          const kelData = await fetch(
-            `/api/wilayah/kelurahan?kecamatanId=${kecamatan}`
-          ).then((r) => r.json());
+          const kelData = await fetch(`/api/wilayah/kelurahan?kecamatanId=${kecamatan}`).then((r) => r.json());
           setKelurahanList(kelData);
         }
 
@@ -101,14 +98,12 @@ export default function ProfilePage() {
     fetchData();
   }, [session]);
 
-  // Fetch provinsi awal
   useEffect(() => {
     fetch("/api/wilayah/provinsi")
       .then((res) => res.json())
       .then((data) => setProvinsiList(data));
   }, []);
 
-  // Dynamic fetching on change
   useEffect(() => {
     if (form.provinsiId) {
       fetch(`/api/wilayah/kota?provinsiId=${form.provinsiId}`)
@@ -158,10 +153,10 @@ export default function ProfilePage() {
     });
 
     if (res.ok) {
-      alert("Profil berhasil diperbarui!");
+      alert("Profil kamu udah di-update 💅");
       router.refresh();
     } else {
-      alert("Gagal memperbarui profil.");
+      alert("Oops, gagal update profil 😢");
     }
   };
 
@@ -170,199 +165,197 @@ export default function ProfilePage() {
       ? URL.createObjectURL(form.image)
       : form.image || "/images/default-avatar.png";
 
-  if (status === "loading" || loading)
-    return <div className="p-4">Loading...</div>;
+  if (status === "loading" || loading) return <div className="p-4">Loading dulu yaa...</div>;
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
   }
 
-  return (
-    <div className="max-w-2xl mx-auto p-4">
-      <Card className="w-full max-w-2xl bg-white/10 backdrop-blur-md shadow-xl rounded-2xl border-none text-white">
-        <CardHeader className="flex flex-col items-center gap-1">
-          <h1 className="text-2xl font-bold text-white">Profil Saya</h1>
-          <p className="text-sm text-gray-300">
-            @{form.username || "username"}
-          </p>
+ // ... (import, session, useState, useEffect, dll tetap sama)
+
+ return (
+  <div className="max-w-screen-xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+    <ProfileSidebar isVerified={isVerified} />
+
+    <div className="flex-1">
+      <Card className="bg-white shadow-xl rounded-2xl border border-border text-gray-800">
+        <CardHeader className="text-center">
+          <h1 className="text-2xl font-bold">🧑‍💼 Data Diri Kamu</h1>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="flex flex-col items-center gap-2 relative">
-            <img
-              src={imageUrl}
-              alt="Foto Profil"
-              className="w-24 h-24 rounded-full object-cover ring-2 ring-white cursor-pointer"
-              onClick={() => document.getElementById("upload-photo")?.click()}
-            />
-            <Input
-              id="upload-photo"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setForm((prev) => ({ ...prev, image: file }));
-                }
-              }}
-              className="hidden"
-            />
-            <span className="text-xs text-gray-400">Klik foto untuk ganti</span>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* FORM KOLOM KIRI */}
+            <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+              <div>
+                <Label htmlFor="name">Nama Lengkap</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Masukin nama kamu ya"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  value={form.email}
+                  readOnly
+                  className="cursor-not-allowed text-muted-foreground"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phoneNumber">Nomor WhatsApp</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  value={form.phoneNumber}
+                  readOnly
+                  className="cursor-not-allowed text-muted-foreground"
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Alamat Domisili</Label>
+
+                <Select
+                  onValueChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      provinsiId: val,
+                      kotaId: "",
+                      kecamatanId: "",
+                      kelurahanId: "",
+                    }))
+                  }
+                  value={form.provinsiId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Provinsi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {provinsiList.map((prov) => (
+                      <SelectItem key={prov.kode} value={prov.kode}>
+                        {prov.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  onValueChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      kotaId: val,
+                      kecamatanId: "",
+                      kelurahanId: "",
+                    }))
+                  }
+                  value={form.kotaId}
+                  disabled={!form.provinsiId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kota/Kabupaten" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kotaList.map((kota) => (
+                      <SelectItem key={kota.kode} value={kota.kode}>
+                        {kota.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  onValueChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      kecamatanId: val,
+                      kelurahanId: "",
+                    }))
+                  }
+                  value={form.kecamatanId}
+                  disabled={!form.kotaId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kecamatan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kecamatanList.map((kec) => (
+                      <SelectItem key={kec.kode} value={kec.kode}>
+                        {kec.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  onValueChange={(val) =>
+                    setForm((prev) => ({ ...prev, kelurahanId: val }))
+                  }
+                  value={form.kelurahanId}
+                  disabled={!form.kecamatanId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kelurahan/Desa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kelurahanList.map((kel) => (
+                      <SelectItem key={kel.kode} value={kel.kode}>
+                        {kel.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <CardFooter className="pt-6">
+                <Button type="submit" className="w-full">
+                  🚀 Simpan Perubahan
+                </Button>
+              </CardFooter>
+            </form>
+
+            {/* FOTO KOLOM KANAN */}
+            <div className="flex flex-col items-center gap-2 w-full md:w-48">
+              <p className="text-sm text-muted-foreground mb-1">
+                @{form.username || "username"}
+              </p>
+              <img
+                src={imageUrl}
+                alt="Foto Profil"
+                className="w-24 h-24 rounded-full object-cover ring-2 ring-primary cursor-pointer"
+                onClick={() => document.getElementById("upload-photo")?.click()}
+              />
+              <Input
+                id="upload-photo"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setForm((prev) => ({ ...prev, image: file }));
+                  }
+                }}
+                className="hidden"
+              />
+              <span className="text-xs text-muted-foreground text-center">
+                Klik buat ganti foto kamu 📸
+              </span>
+            </div>
           </div>
-
-          <Separator className="bg-gray-700" />
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Input nama */}
-            <div>
-              <Label htmlFor="name">Nama</Label>
-              <Input
-                id="name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Nama"
-                className="bg-gray-800 text-white border-gray-600"
-              />
-            </div>
-
-            {/* Input email */}
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                value={form.email}
-                readOnly
-                className="bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed"
-              />
-            </div>
-
-            {/* Input phone */}
-            <div>
-              <Label htmlFor="phoneNumber">Nomor HP</Label>
-              <Input
-                id="phoneNumber"
-                name="phoneNumber"
-                value={form.phoneNumber}
-                onChange={handleChange}
-                placeholder="Nomor HP"
-                className="bg-gray-800 text-white border-gray-600"
-              />
-            </div>
-
-            <Separator className="bg-gray-700" />
-
-            {/* Alamat */}
-            <div className="space-y-2">
-              <Label>Alamat</Label>
-
-              {/* Pilihan Provinsi */}
-              <Select
-                onValueChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    provinsiId: val,
-                    kotaId: "",
-                    kecamatanId: "",
-                    kelurahanId: "",
-                  }))
-                }
-                value={form.provinsiId}
-              >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Pilih Provinsi" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 text-white">
-                  {provinsiList.map((prov) => (
-                    <SelectItem key={prov.kode} value={prov.kode}>
-                      {prov.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Pilihan Kota */}
-              <Select
-                onValueChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    kotaId: val,
-                    kecamatanId: "",
-                    kelurahanId: "",
-                  }))
-                }
-                value={form.kotaId}
-                disabled={!form.provinsiId}
-              >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Pilih Kota/Kabupaten" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 text-white">
-                  {kotaList.map((kota) => (
-                    <SelectItem key={kota.kode} value={kota.kode}>
-                      {kota.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Pilihan Kecamatan */}
-              <Select
-                onValueChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    kecamatanId: val,
-                    kelurahanId: "",
-                  }))
-                }
-                value={form.kecamatanId}
-                disabled={!form.kotaId}
-              >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Pilih Kecamatan" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 text-white">
-                  {kecamatanList.map((kec) => (
-                    <SelectItem key={kec.kode} value={kec.kode}>
-                      {kec.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Pilihan Kelurahan */}
-              <Select
-                onValueChange={(val) =>
-                  setForm((prev) => ({ ...prev, kelurahanId: val }))
-                }
-                value={form.kelurahanId}
-                disabled={!form.kecamatanId}
-              >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Pilih Kelurahan/Desa" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 text-white">
-                  {kelurahanList.map((kel) => (
-                    <SelectItem key={kel.kode} value={kel.kode}>
-                      {kel.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <CardFooter className="pt-6">
-              <Button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Simpan Perubahan
-              </Button>
-            </CardFooter>
-          </form>
         </CardContent>
       </Card>
     </div>
-  );
+  </div>
+);
 }
+
+
