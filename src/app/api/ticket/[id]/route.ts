@@ -23,7 +23,31 @@ export async function GET(
             createdAt: "desc",
           },
           include: {
-            user: true, // 🛠️ Agar bid.user.name tersedia
+            user: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            createdAt: true,
+            image : true,
+            _count: {
+              select: {
+                tickets: {
+                  where: {
+                    statusLelang: "SELESAI",
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -35,6 +59,7 @@ export async function GET(
 
     return NextResponse.json(ticket);
   } catch (error) {
+    console.error("Error fetching ticket:", error);
     return NextResponse.json({ message: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

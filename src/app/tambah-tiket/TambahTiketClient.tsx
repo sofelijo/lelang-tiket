@@ -70,7 +70,7 @@ export default function TambahTiketPage() {
     deskripsi: string;
     sebelahan: boolean;
   }>({
-    jumlah: "",
+    jumlah: "1",
     harga: "",
     tipeTempat: "",
     seat: "",
@@ -157,7 +157,7 @@ export default function TambahTiketPage() {
     }
     fetchSession();
   }, []);
-  
+
   const handleLaunch = async () => {
     const payload = {
       konserId: selectedKonser?.id,
@@ -173,9 +173,9 @@ export default function TambahTiketPage() {
       jumlah: detail.jumlah,
       statusLelang: tipeJual === "LELANG" ? "BERLANGSUNG" : "SELESAI",
     };
-  
+
     console.log("🚀 Payload kirim tiket:", payload);
-  
+
     try {
       const res = await fetch("/api/ticket", {
         method: "POST",
@@ -190,15 +190,14 @@ export default function TambahTiketPage() {
       console.log("✅ Response:", result);
 
       // lanjut kirim notifikasi seperti biasa...
-      
-  
+
       if (!res.ok) {
         throw new Error(result.message || "Unknown error");
       }
-  
+
       // 🔍 Log sesi user
       console.log("👤 Session user ID:", session?.user?.id);
-  
+
       // 🔔 Kirim notifikasi
       const notifRes = await fetch("/api/notifikasi/add", {
         method: "POST",
@@ -211,14 +210,14 @@ export default function TambahTiketPage() {
           link: `/ticket/${result.id}`,
         }),
       });
-  
+
       const notifResult = await notifRes.json();
       console.log("🔔 Response notifikasi:", notifResult);
-  
+
       if (!notifRes.ok) {
         throw new Error("Gagal kirim notifikasi: " + notifResult.message);
       }
-  
+
       toast.success("🎉 Tiket kamu berhasil di-launching!");
       router.push("/");
     } catch (err: any) {
@@ -226,8 +225,6 @@ export default function TambahTiketPage() {
       toast.error(`Gagal launching tiket: ${err.message || "Unknown error"}`);
     }
   };
-  
-  
 
   function formatHarga(value: string): string {
     if (!value) return "";
@@ -241,10 +238,13 @@ export default function TambahTiketPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">🪄 Tambah Tiket Baru</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Yuk listing tiket konser kamu biar bisa langsung diserbu penonton! 🔥
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">🪄 Tambah Tiket Baru</h1>
+        <p className="text-sm text-muted-foreground">
+          🔥 Yuk listing tiket konser kamu biar bisa langsung diserbu penonton!
+        </p>
+      </div>
+
       <Stepper step={step} />
       <Separator className="my-4" />
       {step === 1 && (
@@ -292,7 +292,12 @@ export default function TambahTiketPage() {
                     image={k.image}
                     onClick={() => {
                       setSelectedKonser(k);
-                      toast.success(`🎤 Kamu pilih: ${k.nama}`);
+                      toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+                    }}
+                    onDoubleClick={() => {
+                      setSelectedKonser(k);
+                      setStep(2);
+                      toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
                     }}
                     className={
                       selectedKonser?.id === k.id
@@ -325,7 +330,12 @@ export default function TambahTiketPage() {
                     image={k.image}
                     onClick={() => {
                       setSelectedKonser(k);
-                      toast.success(`🎤 Kamu pilih: ${k.nama}`);
+                      toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+                    }}
+                    onDoubleClick={() => {
+                      setSelectedKonser(k);
+                      setStep(2);
+                      toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
                     }}
                     className={
                       selectedKonser?.id === k.id
@@ -378,20 +388,50 @@ export default function TambahTiketPage() {
             Pilih metode penjualan tiket kamu. Mau rame-rame rebutan lelang,
             atau langsung aja bayar lunas 💸
           </p>
-          <Button
-            variant={tipeJual === "LELANG" ? "default" : "outline"}
-            onClick={() => setTipeJual("LELANG")}
-            className="w-full"
-          >
-            🎯 Lelang
-          </Button>
-          <Button
-            variant={tipeJual === "JUAL_LANGSUNG" ? "default" : "outline"}
-            onClick={() => setTipeJual("JUAL_LANGSUNG")}
-            className="w-full"
-          >
-            💰 Jual Langsung
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant={tipeJual === "LELANG" ? "default" : "outline"}
+              //onClick={() => setTipeJual("LELANG")}
+              onClick={() => {
+                setTipeJual("LELANG");
+                toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+              }}
+              onDoubleClick={() => {
+                setStep(3);
+                toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
+              }}
+              className="flex-1 py-4 h-auto"
+            >
+              <div className="text-center leading-tight">
+                <div className="text-sm font-bold">🎯 Lelang</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Buka harga awal, <br />
+                  biarin pembeli saling nawar 🔥
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              variant={tipeJual === "JUAL_LANGSUNG" ? "default" : "outline"}
+              onClick={() => {
+                setTipeJual("JUAL_LANGSUNG");
+                toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+              }}
+              onDoubleClick={() => {
+                setStep(3);
+                toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
+              }}
+              className="flex-1 py-4 h-auto"
+            >
+              <div className="text-center leading-tight">
+                <div className="text-sm font-bold">💰 Jual Langsung</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Kasih harga fix, <br />
+                  yang siap bayar langsung sikat 💸
+                </div>
+              </div>
+            </Button>
+          </div>
 
           <div className="text-xs text-muted-foreground pt-2">
             Kamu bisa tentuin harga kalau pilih jual langsung. Kalau lelang,
@@ -420,59 +460,97 @@ export default function TambahTiketPage() {
           </div>
 
           {/* Dropdown kategori */}
-          <div>
-            <label className="text-sm font-medium">🎟️ Kategori Tiket</label>
-            <select
-              className="w-full border border-input bg-background p-2 rounded-md"
-              value={detail.kategoriId || ""}
-              onChange={(e) =>
-                setDetail({ ...detail, kategoriId: parseInt(e.target.value) })
-              }
-            >
-              <option value="">Pilih kategori...</option>
-              {kategoriList.map((kat) => (
-                <option key={kat.id} value={kat.id}>
-                  {kat.nama}
-                </option>
-              ))}
-            </select>
-          </div>
 
           {/* Tipe tempat duduk */}
-          <div>
-            <label className="text-sm font-medium">🪑 Tipe Tempat</label>
-            <div className="flex gap-4 pt-1">
-              {["duduk", "berdiri"].map((tipe) => (
-                <Button
-                  key={tipe}
-                  variant={detail.tipeTempat === tipe ? "default" : "outline"}
-                  onClick={() =>
-                    setDetail({
-                      ...detail,
-                      tipeTempat: tipe,
-                      seat: tipe === "berdiri" ? "" : detail.seat,
-                    })
+          <div className="flex flex-col md:flex-row flex-wrap gap-4">
+            {/* Kategori Tiket */}
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-sm font-medium block mb-1">
+                🎟️ Kategori
+              </label>
+              <select
+                className="w-full border border-input bg-background p-2 rounded-md text-sm"
+                value={detail.kategoriId || ""}
+                onChange={(e) =>
+                  setDetail({ ...detail, kategoriId: parseInt(e.target.value) })
+                }
+              >
+                <option value="">Pilih kategori...</option>
+                {kategoriList.map((kat) => (
+                  <option key={kat.id} value={kat.id}>
+                    {kat.nama}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tipe Tempat */}
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-sm font-medium block mb-1">
+                🪑 Tempat
+              </label>
+              <div className="flex gap-2">
+                {["duduk", "berdiri"].map((tipe) => (
+                  <Button
+                    key={tipe}
+                    variant={detail.tipeTempat === tipe ? "default" : "outline"}
+                    onClick={() =>
+                      setDetail({
+                        ...detail,
+                        tipeTempat: tipe,
+                        seat: tipe === "berdiri" ? "" : detail.seat,
+                      })
+                    }
+                    className="px-3 py-2 text-xs"
+                  >
+                    {tipe === "duduk" ? "🪑 Duduk" : "🕺 Berdiri"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Jumlah Tiket */}
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-sm font-medium block mb-1">
+                🎫 Jumlah
+              </label>
+              <select
+                value={detail.jumlah}
+                onChange={(e) =>
+                  setDetail({ ...detail, jumlah: e.target.value })
+                }
+                className="w-full border border-input rounded-md px-2 py-2 text-sm bg-background text-foreground"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+                  <option key={val} value={String(val)}>
+                    {val} tiket
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sebelahan */}
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-sm font-medium block mb-1">
+                ✅ Sebelahan 😎
+              </label>
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={detail.sebelahan || false}
+                  onChange={(e) =>
+                    setDetail({ ...detail, sebelahan: e.target.checked })
                   }
-                >
-                  {tipe === "duduk" ? "🪑 Duduk" : "🕺 Berdiri"}
-                </Button>
-              ))}
+                  className="w-5 h-5 accent-green-600 mt-1"
+                />
+                <span className="text-xs text-muted-foreground leading-snug">
+                  Biar gak duduk sendiri 😢
+                </span>
+              </label>
             </div>
           </div>
 
           {/* Checkbox sebelahan */}
-          {detail.tipeTempat === "duduk" && (
-            <label className="flex items-center gap-2 text-sm pt-2">
-              <input
-                type="checkbox"
-                checked={detail.sebelahan || false}
-                onChange={(e) =>
-                  setDetail({ ...detail, sebelahan: e.target.checked })
-                }
-              />
-              Mau duduknya barengan kayak bestie 😎
-            </label>
-          )}
 
           {/* Seat hanya jika duduk */}
           {detail.tipeTempat === "duduk" && (
@@ -502,14 +580,6 @@ export default function TambahTiketPage() {
           )}
 
           {/* Jumlah dan deskripsi */}
-          <div>
-            <label className="text-sm font-medium">🎫 Jumlah Tiket</label>
-            <Input
-              placeholder="Jumlah tiket"
-              value={detail.jumlah}
-              onChange={(e) => setDetail({ ...detail, jumlah: e.target.value })}
-            />
-          </div>
 
           <div>
             <label className="text-sm font-medium">📝 Deskripsi Tambahan</label>
@@ -526,157 +596,173 @@ export default function TambahTiketPage() {
 
           {/* Field berbeda berdasarkan metode */}
           {tipeJual === "LELANG" ? (
-            <>
-              <label className="text-sm font-medium">💸 Harga Awal</label>
-              <Input
-                placeholder="Rp 1.000.000"
-                value={formatHarga(detail.harga_awal)}
-                onChange={(e) =>
-                  setDetail({
-                    ...detail,
-                    harga_awal: parseAngka(e.target.value),
-                  })
-                }
-              />
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Harga Awal */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  💸 Harga Awal
+                </label>
+                <Input
+                  placeholder="Rp 1.000.000"
+                  value={formatHarga(detail.harga_awal)}
+                  onChange={(e) =>
+                    setDetail({
+                      ...detail,
+                      harga_awal: parseAngka(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <label className="text-sm font-medium">📈 Kelipatan Bid</label>
-              <Input
-                placeholder="Rp 50.000"
-                value={formatHarga(detail.kelipatan)}
-                onChange={(e) =>
-                  setDetail({
-                    ...detail,
-                    kelipatan: parseAngka(e.target.value),
-                  })
-                }
-              />
+              {/* Kelipatan */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  📈 Kelipatan Bid
+                </label>
+                <Input
+                  placeholder="Rp 50.000"
+                  value={formatHarga(detail.kelipatan)}
+                  onChange={(e) =>
+                    setDetail({
+                      ...detail,
+                      kelipatan: parseAngka(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <label className="text-sm font-medium">
-                💰 Harga Beli Langsung
-              </label>
-              <Input
-                placeholder="Rp 2.000.000"
-                value={formatHarga(detail.harga_beli)}
-                onChange={(e) =>
-                  setDetail({
-                    ...detail,
-                    harga_beli: parseAngka(e.target.value),
-                  })
-                }
-              />
+              {/* Harga Beli Langsung */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  💰 Harga Beli Langsung
+                </label>
+                <Input
+                  placeholder="Rp 2.000.000"
+                  value={formatHarga(detail.harga_beli)}
+                  onChange={(e) =>
+                    setDetail({
+                      ...detail,
+                      harga_beli: parseAngka(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <label className="text-sm font-medium">
-                ⏰ Batas Waktu Lelang
-              </label>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {detail.batas_waktu ? (
-                      new Date(detail.batas_waktu).toLocaleString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    ) : (
-                      <span>Pilih batas waktu lelang</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-
-                <PopoverContent className="w-auto p-4 space-y-4">
-                  {/* Kalender */}
-                  <Calendar
-                    mode="single"
-                    selected={
-                      detail.batas_waktu
-                        ? new Date(detail.batas_waktu)
-                        : undefined
-                    }
-                    onSelect={(date) => {
-                      if (!date) return;
-
-                      const max = addDays(new Date(), 7);
-                      if (date > max) {
-                        toast.error(
-                          "🚫 Jangan terlalu jauh yaa, max 7 hari aja 🤏"
-                        );
-                        return;
+              {/* Batas Waktu */}
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium mb-1 block">
+                  ⏰ Batas Waktu Lelang
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {detail.batas_waktu ? (
+                        new Date(detail.batas_waktu).toLocaleString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      ) : (
+                        <span>Pilih batas waktu lelang</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4 space-y-4">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        detail.batas_waktu
+                          ? new Date(detail.batas_waktu)
+                          : undefined
                       }
-
-                      const [hh, mm] = selectedJam.split(":");
-                      date.setHours(Number(hh), Number(mm), 0, 0);
-                      setDetail({ ...detail, batas_waktu: date.toISOString() });
-                    }}
-                    initialFocus
-                  />
-
-                  {/* Picker Jam */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Jam</label>
-                    <div className="flex gap-2">
-                      <select
-                        className="border border-input bg-background rounded-md p-2 text-sm"
-                        value={selectedJam.split(":")[0]}
-                        onChange={(e) => {
-                          const newJam = `${e.target.value}:${
-                            selectedJam.split(":")[1]
-                          }`;
-                          setSelectedJam(newJam);
-                          updateDetailWaktu(newJam);
-                        }}
-                      >
-                        {[...Array(24)].map((_, i) => {
-                          const val = i.toString().padStart(2, "0");
-                          return (
+                      onSelect={(date) => {
+                        if (!date) return;
+                        const max = addDays(new Date(), 7);
+                        if (date > max) {
+                          toast.error(
+                            "🚫 Jangan terlalu jauh yaa, max 7 hari aja 🤏"
+                          );
+                          return;
+                        }
+                        const [hh, mm] = selectedJam.split(":");
+                        date.setHours(Number(hh), Number(mm), 0, 0);
+                        setDetail({
+                          ...detail,
+                          batas_waktu: date.toISOString(),
+                        });
+                      }}
+                      initialFocus
+                    />
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Jam</label>
+                      <div className="flex gap-2">
+                        <select
+                          className="border border-input bg-background rounded-md p-2 text-sm"
+                          value={selectedJam.split(":")[0]}
+                          onChange={(e) => {
+                            const newJam = `${e.target.value}:${
+                              selectedJam.split(":")[1]
+                            }`;
+                            setSelectedJam(newJam);
+                            updateDetailWaktu(newJam);
+                          }}
+                        >
+                          {[...Array(24)].map((_, i) => {
+                            const val = i.toString().padStart(2, "0");
+                            return (
+                              <option key={val} value={val}>
+                                {val}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <select
+                          className="border border-input bg-background rounded-md p-2 text-sm"
+                          value={selectedJam.split(":")[1]}
+                          onChange={(e) => {
+                            const newJam = `${selectedJam.split(":")[0]}:${
+                              e.target.value
+                            }`;
+                            setSelectedJam(newJam);
+                            updateDetailWaktu(newJam);
+                          }}
+                        >
+                          {["00", "15", "30", "45"].map((val) => (
                             <option key={val} value={val}>
                               {val}
                             </option>
-                          );
-                        })}
-                      </select>
-
-                      <select
-                        className="border border-input bg-background rounded-md p-2 text-sm"
-                        value={selectedJam.split(":")[1]}
-                        onChange={(e) => {
-                          const newJam = `${selectedJam.split(":")[0]}:${
-                            e.target.value
-                          }`;
-                          setSelectedJam(newJam);
-                          updateDetailWaktu(newJam);
-                        }}
-                      >
-                        {["00", "15", "30", "45"].map((val) => (
-                          <option key={val} value={val}>
-                            {val}
-                          </option>
-                        ))}
-                      </select>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              <label className="text-sm font-medium">🔁 Perpanjangan Bid</label>
-              <select
-                className="w-full border border-input bg-background p-2 rounded-md"
-                value={detail.perpanjangan_bid || "TANPA"}
-                onChange={(e) =>
-                  setDetail({ ...detail, perpanjangan_bid: e.target.value })
-                }
-              >
-                <option value="TANPA">Tanpa</option>
-                <option value="SATU_HARI">+1 Hari</option>
-                <option value="DUA_HARI">+2 Hari</option>
-              </select>
-            </>
+              {/* Perpanjangan Bid */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  🔁 Perpanjangan Bid
+                </label>
+                <select
+                  className="w-full border border-input bg-background p-2 rounded-md text-sm"
+                  value={detail.perpanjangan_bid || "TANPA"}
+                  onChange={(e) =>
+                    setDetail({ ...detail, perpanjangan_bid: e.target.value })
+                  }
+                >
+                  <option value="TANPA">Tanpa</option>
+                  <option value="SATU_HARI">+1 Hari</option>
+                  <option value="DUA_HARI">+2 Hari</option>
+                </select>
+              </div>
+            </div>
           ) : (
             <>
               <label className="text-sm font-medium">💳 Harga Tiket</label>
@@ -722,65 +808,80 @@ export default function TambahTiketPage() {
       {step === 4 && (
         <Card className="p-6 space-y-4">
           <h2 className="text-xl font-bold">4. Konfirmasi & Launching 🚀</h2>
-          <div className="text-sm space-y-2">
-            <div>
-              🎤 <b>Konser:</b> {selectedKonser?.nama} -{" "}
-              {kategoriList.find((k) => k.id === detail.kategoriId)?.nama ||
-                "Kategori tidak ditemukan"}
-            </div>
-            <div>
-              📍 <b>Tanggal & Lokasi:</b>{" "}
-              {new Date(selectedKonser?.tanggal).toLocaleDateString("id-ID")} —{" "}
-              {selectedKonser?.lokasi}
-            </div>
-            <div>
-              💼 <b>Metode:</b>{" "}
-              {tipeJual === "LELANG" ? "Lelang" : "Jual Langsung"}
-            </div>
-            <div>
-              🎫 <b>Jumlah Tiket:</b> {detail.jumlah}
-            </div>
-            <div>
-              🪑 <b>Tipe Tempat Duduk:</b> {detail.tipeTempat}
-              {detail.seat ? ` (${detail.seat})` : ""}
-              {detail.sebelahan ? " /sebelahan" : ""}
-            </div>
+          <Separator />
 
-            {tipeJual === "LELANG" ? (
-              <>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Kolom Kiri: Detail */}
+            <div className="flex-1 text-sm space-y-2">
+              <div>
+                🎤 <b>Konser:</b> {selectedKonser?.nama} -{" "}
+                {kategoriList.find((k) => k.id === detail.kategoriId)?.nama ||
+                  "Kategori tidak ditemukan"}
+              </div>
+              <div>
+                📍 <b>Tanggal & Lokasi:</b>{" "}
+                {new Date(selectedKonser?.tanggal).toLocaleDateString("id-ID")}{" "}
+                — {selectedKonser?.lokasi}
+              </div>
+              <div>
+                💼 <b>Metode:</b>{" "}
+                {tipeJual === "LELANG" ? "Lelang" : "Jual Langsung"}
+              </div>
+              <div>
+                🎫 <b>Jumlah Tiket:</b> {detail.jumlah}
+              </div>
+              <div>
+                🪑 <b>Tipe Tempat Duduk:</b> {detail.tipeTempat}
+                {detail.seat ? ` (${detail.seat})` : ""}
+                {detail.sebelahan ? " /sebelahan" : ""}
+              </div>
+
+              {tipeJual === "LELANG" ? (
+                <>
+                  <div>
+                    💸 <b>Harga Awal:</b> Rp{" "}
+                    {Number(detail.harga_awal).toLocaleString("id-ID")}
+                  </div>
+                  <div>
+                    🪙 <b>Kelipatan:</b> Rp{" "}
+                    {Number(detail.kelipatan).toLocaleString("id-ID")}
+                  </div>
+                  <div>
+                    🛒 <b>Harga Beli Langsung:</b> Rp{" "}
+                    {Number(detail.harga_beli).toLocaleString("id-ID")}
+                  </div>
+                  <div>
+                    ⏰ <b>Batas Waktu:</b>{" "}
+                    {new Date(detail.batas_waktu).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                  <div>
+                    🔁 <b>Perpanjangan Bid:</b> {detail.perpanjangan_bid}
+                  </div>
+                </>
+              ) : (
                 <div>
-                  💸 <b>Harga Awal:</b> Rp{" "}
-                  {Number(detail.harga_awal).toLocaleString("id-ID")}
-                </div>
-                <div>
-                  🪙 <b>Kelipatan:</b> Rp{" "}
-                  {Number(detail.kelipatan).toLocaleString("id-ID")}
-                </div>
-                <div>
-                  🛒 <b>Harga Beli Langsung:</b> Rp{" "}
+                  💸 <b>Harga Tiket:</b> Rp{" "}
                   {Number(detail.harga_beli).toLocaleString("id-ID")}
                 </div>
-                <div>
-                  ⏰ <b>Batas Waktu:</b>{" "}
-                  {new Date(detail.batas_waktu).toLocaleString("id-ID", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-                <div>
-                  🔁 <b>Perpanjangan Bid:</b> {detail.perpanjangan_bid}
-                </div>
-              </>
-            ) : (
-              <div>
-                💸 <b>Harga Tiket:</b> Rp{" "}
-                {Number(detail.harga_beli).toLocaleString("id-ID")}
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Kolom Kanan: Gambar */}
+            <div className="w-full md:w-64">
+              <img
+                src={selectedKonser?.image || "/dummy-konser.jpg"}
+                alt="Gambar konser"
+                className="rounded-lg w-full h-100 object-cover border border-border shadow"
+              />
+            </div>
           </div>
+
           <div className="flex justify-between mt-6">
             <Button variant="outline" onClick={() => setStep(3)}>
               ⬅️ Balik

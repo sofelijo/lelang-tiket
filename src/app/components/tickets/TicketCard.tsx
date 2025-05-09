@@ -12,6 +12,8 @@ interface TicketCardProps {
   venue?: string;
   image?: string | null; // ✅ tambahkan prop image
   onClick?: () => void;
+  onDoubleClick?: () => void; // ✅ tambahkan ini
+
   className?: string;
 }
 
@@ -25,11 +27,13 @@ export default function TicketCard({
   venue,
   image,
   onClick,
+  onDoubleClick,
   className,
 }: TicketCardProps) {
   return (
     <Card
       onClick={onClick}
+      onDoubleClick={onDoubleClick} // ✅ tambahkan ini 
       className={`flex flex-row w-full overflow-hidden hover:shadow-lg transition-all duration-200 ease-in-out rounded-2xl cursor-pointer ${className}`}
     >
       {/* Gambar kiri (1/3) */}
