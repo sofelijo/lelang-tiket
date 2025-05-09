@@ -12,10 +12,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ticket: {
         include: {
           konser: true,
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phoneNumber: true, // nomor WA penjual
+            },
+          },
         },
       },
-      buyer: true,
+      buyer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phoneNumber: true, // nomor WA pembeli
+        },
+      },
     },
   });
 

@@ -25,8 +25,8 @@ export default function KonfirmasiPage() {
       try {
         const res = await fetch(`/api/pembayaran/${pembayaranId}`);
         const data = await res.json();
+
         if (!data || data.statusPembayaran !== "BERHASIL") {
-          // Jika belum bayar, redirect balik
           router.push(`/pembayaran/${pembayaranId}`);
           return;
         }
@@ -55,25 +55,35 @@ export default function KonfirmasiPage() {
     );
   }
 
-  const waAdmin = "6281234567890"; // Ganti dengan nomor admin
-  const pesanWA = encodeURIComponent(
-    `Halo kak admin! Aku udah bayar tiket konser "${pembayaran.ticket.konser.nama}".\n\n` +
-      `👤 Nama Pembeli: ${pembayaran.buyer.name}\n` +
-      `👥 Nama Penjual: ${pembayaran.ticket.user.name}\n` +
-      `💰 Total Bayar: ${formatRupiah(pembayaran.jumlahTotal)}\n\n` +
-      `Tolong dicek yaa 🙏✨`
+  const waPenjual = pembayaran.ticket.user?.phoneNumber;
+  const waPembeli = pembayaran.buyer?.phoneNumber;
+  const waAdmin = "6281234567890"; // bisa diganti
+
+  const urlKonfirmasi = `https://www.momen.com/pembayaran/${pembayaranId}/konfirmasi`;
+
+  const pesanPenjual = encodeURIComponent(
+    `Halo kak ${pembayaran.ticket.user.name}, aku udah bayar tiket konser "${pembayaran.ticket.konser.nama}".\n\n` +
+      `👤 Aku pembeli di momen.com, nomor WA-ku: ${waPembeli}\n` +
+      `Ini link bukti konfirmasinya ya: ${urlKonfirmasi}\n\n` +
+      `Mohon bantuannya untuk segera diproses 🙏✨`
+  );
+
+  const pesanAdmin = encodeURIComponent(
+    `Halo admin, aku sudah bayar tiket konser "${pembayaran.ticket.konser.nama}" tapi belum dapat respon dari penjual.\n\n` +
+      `Nama pembeli: ${pembayaran.buyer.name} (${waPembeli})\n` +
+      `Konfirmasi: ${urlKonfirmasi}`
   );
 
   return (
-    <div className="max-w-xl mx-auto p-4">
+    <div className="max-w-xl mx-auto p-4 relative">
       <Stepper step={3} />
 
       <Card className="mt-4 p-4 space-y-4">
-        <h2 className="text-lg font-bold">3. Konfirmasi ke Admin</h2>
+        <h2 className="text-lg font-bold">3. Hubungi Penjual</h2>
 
         <div className="text-sm space-y-2">
           <p className="text-muted-foreground">
-            Yeay! Pembayaran kamu sukses 🎉 Sekarang tinggal konfirmasi aja ke admin biar tiket kamu segera diproses~
+            Pembayaran kamu udah sukses 🎉 Sekarang tinggal konfirmasi ke penjual biar tiket kamu segera diproses~
           </p>
 
           <div>
@@ -82,31 +92,32 @@ export default function KonfirmasiPage() {
           </div>
           <div>
             <span className="font-medium">🧍 Pembeli:</span>{" "}
-            {pembayaran.buyer.name}
+            {pembayaran.buyer.name} ({waPembeli || "no WA"})
           </div>
           <div>
             <span className="font-medium">🧑‍💼 Penjual:</span>{" "}
-            {pembayaran.ticket.user.name}
+            {pembayaran.ticket.user.name} ({waPenjual || "no WA"})
           </div>
           <div>
             <span className="font-medium">💸 Total Bayar:</span>{" "}
             {formatRupiah(pembayaran.jumlahTotal)}
           </div>
+
+          <a
+            href={`https://wa.me/${waPenjual}?text=${pesanPenjual}`}
+            target="_blank"
+            className="block mt-3"
+          >
+            <button className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+              Chat Penjual via WhatsApp 📱
+            </button>
+          </a>
+
+          <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 p-2 rounded-md mt-2">
+            ⚠️ <strong>Tips keamanan:</strong> Pastikan nomor WhatsApp yang
+            menghubungi kamu sesuai dengan yang tertera di halaman ini.
+          </div>
         </div>
-
-        <a
-          href={`https://wa.me/${waAdmin}?text=${pesanWA}`}
-          target="_blank"
-          className="block"
-        >
-          <button className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-            Chat Admin via WhatsApp 🚀
-          </button>
-        </a>
-
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Pastikan kamu udah kirim bukti kalau diminta ya~
-        </p>
 
         <Link
           href={`/pembayaran/${pembayaranId}`}
@@ -115,6 +126,18 @@ export default function KonfirmasiPage() {
           ← Balik ke detail pembayaran
         </Link>
       </Card>
+
+      {/* Tombol bantuan admin kecil di pojok kanan bawah */}
+      <a
+        href={`https://wa.me/${waAdmin}?text=${pesanAdmin}`}
+        target="_blank"
+        className="fixed bottom-6 right-6 z-50"
+      >
+        <button className="bg-black text-white px-3 py-2 text-sm rounded-full shadow-lg hover:bg-gray-900 transition">
+  ❓ Butuh Bantuan Admin
+</button>
+
+      </a>
     </div>
   );
 }

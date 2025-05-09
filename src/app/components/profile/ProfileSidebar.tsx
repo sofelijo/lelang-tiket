@@ -9,12 +9,33 @@ type Props = {
   isVerified: boolean;
 };
 
-type SidebarItem = {
+export type SidebarItem = {
   label: string;
   href: string;
+  icon?: string;
   badge?: "verified" | "unverified";
 };
 
+/**
+ * Fungsi reusable untuk Navbar maupun Sidebar
+ */
+export function ProfileSidebarItems(user: { isVerified?: boolean }) {
+  return [
+    { label: "Profil Saya", href: "/profile", icon: "👤" },
+    { label: "Riwayat Pesanan", href: "/profile/pesanan", icon: "📄" },
+    { label: "Ganti Password", href: "/profile/password", icon: "🔒" },
+    { label: "Listing Tiketmu", href: "/profile/listinguser", icon: "🎫" },
+    {
+      label: "Verifikasi Nomor",
+      href: "/profile/verifikasi-wa",
+      icon: user?.isVerified ? "✅" : "❌",
+    },
+  ];
+}
+
+/**
+ * Komponen Sidebar utama
+ */
 const ProfileSidebar = ({ isVerified }: Props) => {
   const pathname = usePathname();
 
