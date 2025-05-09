@@ -147,7 +147,17 @@ export default function TambahTiketPage() {
 
     fetchKategori();
   }, [selectedKonser]);
+  const [session, setSession] = useState<any>(null);
 
+  useEffect(() => {
+    async function fetchSession() {
+      const res = await fetch("/api/auth/session");
+      const data = await res.json();
+      if (Object.keys(data).length > 0) setSession(data);
+    }
+    fetchSession();
+  }, []);
+  
   const handleLaunch = async () => {
     const payload = {
       konserId: selectedKonser?.id,
@@ -163,9 +173,9 @@ export default function TambahTiketPage() {
       jumlah: detail.jumlah,
       statusLelang: tipeJual === "LELANG" ? "BERLANGSUNG" : "SELESAI",
     };
-
+  
     console.log("🚀 Payload kirim tiket:", payload);
-
+  
     try {
       const res = await fetch("/api/ticket", {
         method: "POST",
@@ -179,10 +189,36 @@ export default function TambahTiketPage() {
 
       console.log("✅ Response:", result);
 
+      // lanjut kirim notifikasi seperti biasa...
+      
+  
       if (!res.ok) {
         throw new Error(result.message || "Unknown error");
       }
-
+  
+      // 🔍 Log sesi user
+      console.log("👤 Session user ID:", session?.user?.id);
+  
+      // 🔔 Kirim notifikasi
+      const notifRes = await fetch("/api/notifikasi/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: session?.user?.id,
+          pesan: `🚀 Tiket konser ${selectedKonser?.nama} berhasil kamu listing!`,
+          link: `/ticket/${result.id}`,
+        }),
+      });
+  
+      const notifResult = await notifRes.json();
+      console.log("🔔 Response notifikasi:", notifResult);
+  
+      if (!notifRes.ok) {
+        throw new Error("Gagal kirim notifikasi: " + notifResult.message);
+      }
+  
       toast.success("🎉 Tiket kamu berhasil di-launching!");
       router.push("/");
     } catch (err: any) {
@@ -190,6 +226,8 @@ export default function TambahTiketPage() {
       toast.error(`Gagal launching tiket: ${err.message || "Unknown error"}`);
     }
   };
+  
+  
 
   function formatHarga(value: string): string {
     if (!value) return "";

@@ -7,10 +7,11 @@ import { addHours, differenceInHours } from 'date-fns';
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = Number(session.user.id); // ✅ Fix untuk semua userId yang butuh number
     const body = await req.json();
     const { ticketId, amount } = body;
 
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
+        konser: true,
       },
     });
 
@@ -46,12 +48,52 @@ export async function POST(req: Request) {
     const bid = await prisma.bid.create({
       data: {
         ticketId: Number(ticketId),
-        userId: Number(session.user.id),
+        userId: userId,
         amount: Number(amount),
       },
     });
 
-    // ✅ Perpanjangan logika berdasarkan waktu SISA (difference dari sekarang)
+    // ✅ Notifikasi ke pemilik tiket
+    if (ticket.userId && ticket.userId !== userId) {
+      await prisma.notifikasi.create({
+        data: {
+          userId: ticket.userId,
+          pesan: `🔥 Ada tawaran baru di tiket konser ${ticket.konser.nama}`,
+          link: `/ticket/${ticket.id}`,
+        },
+      });
+    }
+
+    // ✅ Notifikasi ke pemasang bid
+    await prisma.notifikasi.create({
+      data: {
+        userId: userId,
+        pesan: `✅ Penawaran kamu di konser ${ticket.konser.nama} berhasil dikirim!`,
+        link: `/ticket/${ticket.id}`,
+      },
+    });
+
+    // ✅ Notifikasi ke semua penawar sebelumnya (kecuali diri sendiri)
+    const semuaBidder = await prisma.bid.findMany({
+      where: {
+        ticketId: Number(ticketId),
+        userId: { not: userId },
+      },
+      distinct: ['userId'],
+    });
+
+    const promises = semuaBidder.map((bidder) =>
+      prisma.notifikasi.create({
+        data: {
+          userId: bidder.userId,
+          pesan: `⚠️ Tawaranmu di konser ${ticket.konser.nama} disalip orang lain!`,
+          link: `/ticket/${ticket.id}`,
+        },
+      })
+    );
+    await Promise.all(promises);
+
+    // ✅ Perpanjangan waktu
     const targetDurasiJam =
       ticket.perpanjangan_bid === "SATU_HARI" ? 24 :
       ticket.perpanjangan_bid === "DUA_HARI" ? 48 :

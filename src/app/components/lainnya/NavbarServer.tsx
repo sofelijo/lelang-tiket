@@ -1,12 +1,15 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import LogoutButton from "./LogoutButton";
 import { Input } from "@/components/ui/input";
 import { Search, X, Bell } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+
+// Ganti jadi:
+import { useRouter, usePathname } from "next/navigation";
+
 import {
   Popover,
   PopoverTrigger,
@@ -24,49 +27,92 @@ export default function NavbarWrapper() {
   if (!shouldShow) return null;
   return <NavbarClient />;
 }
+type Notifikasi = {
+  id: string;
+  pesan: string;
+  link: string;
+  isRead: boolean;
+  createdAt: string;
+};
 
 function NavbarClient() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [openNotif, setOpenNotif] = useState(false);
+
   const [session, setSession] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [notif, setNotif] = useState<Notifikasi[]>([]);
 
-  const notifMock = [
-    {
-      id: "1",
-      pesan: "🎉 Kamu menang lelang tiket BLACKPINK!",
-      waktu: "2 menit lalu",
-      isRead: false,
-    },
-    {
-      id: "2",
-      pesan: "Tawaranmu disalip di tiket Dewa 19",
-      waktu: "1 jam lalu",
-      isRead: true,
-    },
-  ];
+  const refreshNotif = async () => {
+    try {
+      const res = await fetch("/api/notifikasi");
+      const data = await res.json();
+      setNotif(data);
+    } catch (error) {
+      console.error("Gagal fetch notifikasi:", error);
+    }
+  };
+  
 
+  // ✅ Ambil session user
   useEffect(() => {
     async function fetchSession() {
-      const res = await fetch("/api/auth/session");
-      const data = await res.json();
-      if (Object.keys(data).length > 0) setSession(data);
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+        if (Object.keys(data).length > 0) {
+          console.log("👤 Session berhasil:", data);
+          setSession(data);
+        }
+      } catch (error) {
+        console.error("❌ Gagal ambil session:", error);
+      }
     }
+
     fetchSession();
   }, []);
+
+  // ✅ Fetch notifikasi saat session siap
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const fetchNotif = async () => {
+      try {
+        const res = await fetch("/api/notifikasi");
+        const data = await res.json();
+        console.log("📨 Notifikasi masuk ke state:", data); // DEBUG LOG
+        setNotif(data);
+      } catch (err) {
+        console.error("❌ Gagal fetch notifikasi:", err);
+      }
+    };
+
+    fetchNotif();
+    const interval = setInterval(fetchNotif, 30000); // polling tiap 30 detik
+    return () => clearInterval(interval);
+  }, [session]);
+
+  // ✅ Reset hasil pencarian saat berpindah halaman
   useEffect(() => {
     setSearch("");
     setResult([]);
   }, [pathname]);
 
+  // ✅ Pencarian konser (search bar)
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (search.length >= 3) {
         setLoading(true);
-        const res = await fetch(`/api/search?query=${search}`);
-        const data = await res.json();
-        setResult(data || []);
+        try {
+          const res = await fetch(`/api/search?query=${search}`);
+          const data = await res.json();
+          setResult(data || []);
+        } catch (error) {
+          console.error("❌ Gagal fetch search:", error);
+        }
         setLoading(false);
       } else {
         setResult([]);
@@ -80,7 +126,7 @@ function NavbarClient() {
       <div className="max-w-screen-xl mx-auto px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center justify-between w-full md:w-auto">
           <Link href="/" className="text-xl font-bold text-white">
-            lelang<span className="text-blue-400">tiket</span>
+            MOMEN
           </Link>
         </div>
 
@@ -163,39 +209,62 @@ function NavbarClient() {
 
           {session?.user && (
             <>
-              {/* Notifikasi Bell */}
-              <Popover>
+              {/* 🔔 Notifikasi */}
+              <Popover open={openNotif} onOpenChange={setOpenNotif}>
                 <PopoverTrigger asChild>
                   <button className="relative p-1">
                     <Bell className="w-5 h-5" />
-                    {notifMock.some((n) => !n.isRead) && (
+                    {notif.some((n) => !n.isRead) && (
                       <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
                     )}
                   </button>
                 </PopoverTrigger>
+
                 <PopoverContent className="w-80 p-4 space-y-2">
-                  <h4 className="font-semibold text-sm mb-2">Notifikasi</h4>
-                  {notifMock.length === 0 ? (
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">Notifikasi</h4>
+                    {notif.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/notifikasi/mark-all", {
+                            method: "PATCH",
+                          });
+                          refreshNotif();
+                        }}
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        Tandai semua dibaca
+                      </button>
+                    )}
+                  </div>
+
+                  {notif.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       Belum ada notifikasi
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {notifMock.map((n) => (
-                        <div
+                      {notif.map((n) => (
+                        <button
                           key={n.id}
-                          className="p-2 rounded-md border hover:bg-muted cursor-pointer"
+                          onClick={() => {
+                            setOpenNotif(false); // ⬅️ manual close
+                            router.push(n.link);
+                          }}
+                          className="text-left w-full p-2 rounded-md border hover:bg-muted transition"
                         >
                           <p className="text-sm">{n.pesan}</p>
-                          <span className="text-xs text-gray-500">{n.waktu}</span>
-                        </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(n.createdAt).toLocaleString("id-ID")}
+                          </span>
+                        </button>
                       ))}
                     </div>
                   )}
                 </PopoverContent>
               </Popover>
 
-              {/* Nama User */}
+              {/* 👤 Nama User */}
               <Link href="/profile" className="hover:text-blue-400">
                 👤 {session.user.name || "Profil"}
               </Link>

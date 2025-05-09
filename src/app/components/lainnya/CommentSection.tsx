@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { CommentWithUser } from "@/lib/types";
 import clsx from 'clsx';
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 interface CommentSectionProps {
   itemId: string;
-  itemType: 'ticket' | 'konser' | string; // fleksibel bisa tambah tipe lain
+  itemType: 'ticket' | 'konser' | string;
   title?: string;
   readonly?: boolean;
   className?: string;
@@ -15,7 +17,7 @@ interface CommentSectionProps {
 export default function CommentSection({
   itemId,
   itemType,
-  title = 'Komentar',
+  title = '💬 Komentar Warga',
   readonly = false,
   className,
 }: CommentSectionProps) {
@@ -34,8 +36,9 @@ export default function CommentSection({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!content.trim()) return;
 
+    setLoading(true);
     const res = await fetch('/api/comments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -43,49 +46,60 @@ export default function CommentSection({
     });
 
     const data = await res.json();
-
     if (res.ok) {
       setComments(prev => [data, ...prev]);
       setContent('');
     } else {
-      alert('Gagal menambahkan komentar');
+      alert('❌ Gagal kirim komentar');
     }
-
     setLoading(false);
   };
 
   return (
-    <div className={clsx("mt-6", className)}>
-      <h2 className="text-xl font-semibold mb-2">{title}</h2>
+    <div className={clsx("mt-6 space-y-4", className)}>
+      <h2 className="text-xl font-bold">{title}</h2>
 
       {!readonly && (
-        <form onSubmit={handleSubmit} className="mb-4">
-          <textarea
-            className="w-full p-2 rounded bg-gray-800 text-white mb-2"
-            placeholder="Tulis komentar..."
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <Textarea
+            placeholder="Tulis unek-unek kamu di sini..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            required
+            className="bg-background border-muted"
           />
-          <button
-            type="submit"
-            className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-            disabled={loading}
-          >
-            {loading ? 'Mengirim...' : 'Kirim Komentar'}
-          </button>
+          <div className="text-right">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loading ? "Mengirim..." : "🚀 Kirim"}
+            </Button>
+          </div>
         </form>
       )}
 
       {comments.length === 0 ? (
-        <p className="text-gray-400">Belum ada komentar.</p>
+        <p className="text-muted-foreground text-sm">Belum ada komentar gengs~</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {comments.map((comment) => (
-            <li key={comment.id} className="bg-gray-800 p-3 rounded">
-              <p className="font-semibold">{comment.user?.name ?? 'Anonim'}</p>
-              <p className="text-sm text-gray-400">{new Date(comment.createdAt).toLocaleString()}</p>
-              <p>{comment.content}</p>
+            <li
+              key={comment.id}
+              className="border rounded-xl p-4 hover:bg-muted transition"
+            >
+              <div className="flex justify-between mb-1">
+                <span className="font-semibold text-sm">{comment.user?.name ?? "Anonim"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(comment.createdAt).toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              <p className="text-sm text-foreground">{comment.content}</p>
             </li>
           ))}
         </ul>

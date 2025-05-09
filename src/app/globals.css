@@ -117,3 +117,14 @@ a {
 .animate-blink-fast {
   animation: blink-fast 0.7s infinite;
 }
+/* src/app/globals.css atau styles/globals.css */
+.scrollable-container::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollable-container::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.4);
+  border-radius: 4px;
+}
+.scrollable-container::-webkit-scrollbar-track {
+  background: transparent;
+}

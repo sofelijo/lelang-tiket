@@ -15,31 +15,33 @@ model Wilayah {
   @@map("wilayah")
 }
 
-model User {
-  id            Int          @id @default(autoincrement())
-  name          String?
-  email         String?      @unique
-  password      String?
-  phoneNumber   String?      @unique
-  isVerified    Boolean      @default(false)
-  role          Role         @default(USER)
-  username      String       @unique
-  image         String?
-  bio           String?
-  namaBank      String?
-  rekeningBank  String?
-  wilayahId     String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  bids          Bid[]
-  Comment       Comment[]
-  pembayaran    Pembayaran[]
-  ticketsMenang Ticket[]     @relation("TicketPemenang")
-  tickets       Ticket[]
-  wilayah       Wilayah?     @relation("WilayahUsers", fields: [wilayahId], references: [kode])
+  model User {
+    id            Int          @id @default(autoincrement())
+    name          String?
+    email         String?      @unique
+    password      String?
+    phoneNumber   String?      @unique
+    isVerified    Boolean      @default(false)
+    role          Role         @default(USER)
+    username      String       @unique
+    image         String?
+    bio           String?
+    namaBank      String?
+    rekeningBank  String?
+    wilayahId     String?
+    createdAt     DateTime     @default(now())
+    updatedAt     DateTime     @updatedAt
+    bids          Bid[]
+    Comment       Comment[]
+    pembayaran    Pembayaran[]
+    ticketsMenang Ticket[]     @relation("TicketPemenang")
+    tickets       Ticket[]
+    wilayah       Wilayah?     @relation("WilayahUsers", fields: [wilayahId], references: [kode])
 
-  OtpLogin OtpLogin[]
-}
+    OtpLogin OtpLogin[]
+
+    Notifikasi Notifikasi[]
+  }
 
 model Konser {
   id             Int              @id @default(autoincrement())
@@ -200,3 +202,15 @@ enum MetodePembayaran {
   QRIS_DINAMIS
   MIDTRANS
 }
+
+
+model Notifikasi {
+  id        String   @id @default(cuid())           // ID notifikasi tetap pakai CUID biar gak urutan
+  userId    Int                                     // Int untuk relasi ke User
+  user      User     @relation(fields: [userId], references: [id])
+  pesan     String                                 // Isi pesan notif (bebas)
+  link      String                                 // Link tujuan saat diklik (contoh: "/ticket/123")
+  isRead    Boolean  @default(false)                // Penanda sudah dibaca
+  createdAt DateTime @default(now())                // Tanggal buat notif
+}
+
