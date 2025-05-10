@@ -1,7 +1,9 @@
+// FULL CODE dengan efek skeleton loader versi PLAYFUL (emoji + warna pastel + bounce)
+
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +17,6 @@ function formatCountdown(jam: number): string {
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-
   if (days > 0)
     return `${String(days).padStart(2, "0")}D${String(hours).padStart(
       2,
@@ -34,25 +35,34 @@ function formatCountdown(jam: number): string {
 
 export default function TiketByKonserPage() {
   const { konserId } = useParams();
+  const router = useRouter();
   const [konser, setKonser] = useState<any>(null);
   const [tiketList, setTiketList] = useState<any[]>([]);
   const [metode, setMetode] = useState<"LELANG" | "JUAL_LANGSUNG">("LELANG");
   const [kategoriAktif, setKategoriAktif] = useState<string | null>(null);
+  const [jumlahAktif, setJumlahAktif] = useState<string | null>(null);
   const [filterSebelahan, setFilterSebelahan] = useState<null | boolean>(null);
-  const [sortBy, setSortBy] = useState<"populer" | "mauhabis" | "murah">(
-    "populer"
-  );
-  const [hargaMurahMode, setHargaMurahMode] = useState<"total" | "satuan">(
-    "total"
-  );
+  const [sortBy, setSortBy] = useState<string>("terpopuler");
+
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
     async function fetchData() {
+      setLoading(true);
+      const query = new URLSearchParams({
+        konserId: String(konserId),
+        metode,
+        ...(kategoriAktif ? { kategori: kategoriAktif } : {}),
+        ...(filterSebelahan !== null
+          ? { sebelahan: String(filterSebelahan) }
+          : {}),
+        ...(jumlahAktif ? { jumlah: jumlahAktif } : {}),
+        sort: sortBy,
+      }).toString();
+
       try {
         const konserRes = await fetch(`/api/konser/${konserId}`);
-        const tiketRes = await fetch(`/api/ticket/konser?konserId=${konserId}`);
+        const tiketRes = await fetch(`/api/ticket/filter?${query}`);
         const konserData = await konserRes.json();
         const tiketData = await tiketRes.json();
         setKonser(konserData);
@@ -60,35 +70,68 @@ export default function TiketByKonserPage() {
       } catch (err) {
         console.error("Gagal fetch data konser/tiket:", err);
       }
+      setLoading(false);
     }
 
-    if (konserId) {
-      fetchData();
-      interval = setInterval(() => {
-        setTiketList((prev) => [...prev]); // trigger render ulang utk countdown
-      }, 1000);
-    }
+    if (konserId) fetchData();
+  }, [konserId, metode, kategoriAktif, filterSebelahan, sortBy, jumlahAktif]);
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [konserId]);
+  if (!konser) {
+    return (
+      <div className="max-w-screen-xl mx-auto px-4 py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar Skeleton */}
+          <div className="lg:w-1/3 space-y-4">
+            <Card className="overflow-hidden animate-pulse bg-yellow-50 border border-yellow-200">
+              <div className="w-full h-[200px] bg-gray-200" />
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-gray-300 rounded w-3/4" />
+                <div className="h-4 bg-gray-300 rounded w-2/3" />
+                <div className="h-4 bg-gray-300 rounded w-1/2" />
+              </div>
+            </Card>
+            <div className="h-10 bg-green-300 rounded animate-bounce" />
+          </div>
 
-  if (!konser) return <div className="p-6 text-center">Loading konser...</div>;
+          {/* Main Skeleton */}
+          <div className="lg:w-2/3 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card
+                key={i}
+                className="p-4 animate-pulse flex items-center justify-between gap-4 bg-yellow-50 border border-yellow-200 shadow"
+              >
+                <div className="flex items-center gap-6 text-sm flex-wrap w-full">
+                  <div className="w-[150px] h-4 rounded bg-pink-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">🎫</span>
+                  </div>
+                  <div className="w-[120px] h-4 rounded bg-blue-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">💰</span>
+                  </div>
+                  <div className="w-[100px] h-4 rounded bg-green-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">🎶</span>
+                  </div>
+                  <div className="w-[100px] h-4 rounded bg-purple-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">⏳</span>
+                  </div>
+                  <div className="w-[130px] h-4 rounded bg-orange-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">👥</span>
+                  </div>
+                </div>
+                <div className="w-16 h-8 rounded bg-green-300 flex items-center justify-center animate-bounce">
+                  🎉
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const kategoriList = konser.kategori || [];
 
-  const tiketTerfilter = tiketList.filter((t) => {
-    if (t.metode !== metode) return false;
-    if (kategoriAktif && t.kategori !== kategoriAktif) return false;
-    if (filterSebelahan !== null && t.sebelahan !== filterSebelahan)
-      return false;
-    return true;
-  });
-
   return (
     <div className="max-w-screen-xl mx-auto flex flex-col lg:flex-row gap-6 px-4 py-6">
-      {/* Sidebar Konser */}
       <aside className="lg:w-1/3 sticky top-4 self-start h-fit space-y-4">
         <Card className="overflow-hidden">
           <img
@@ -106,11 +149,17 @@ export default function TiketByKonserPage() {
             </p>
           </div>
         </Card>
+        <Button
+          onClick={() =>
+            router.push(`/tambah-tiket?step=2&konserId=${konser.id}`)
+          }
+          className="w-full bg-green-600 text-white hover:bg-green-700"
+        >
+          ➕ Tambah Tiket untuk Konser Ini
+        </Button>
       </aside>
 
-      {/* Content Tiket */}
       <section className="lg:w-2/3 space-y-4">
-        {/* Tab: Lelang vs Jual */}
         <div className="flex gap-2">
           {(["LELANG", "JUAL_LANGSUNG"] as const).map((type) => (
             <button
@@ -128,10 +177,9 @@ export default function TiketByKonserPage() {
           ))}
         </div>
 
-        {/* Filter */}
         <div className="flex flex-wrap gap-3 items-center">
           <select
-            className="px-3 py-2 border rounded-md bg-background text-sm text-black dark:text-white"
+            className="px-3 py-2 border rounded-md bg-background text-sm"
             value={kategoriAktif ?? ""}
             onChange={(e) => setKategoriAktif(e.target.value || null)}
           >
@@ -142,9 +190,20 @@ export default function TiketByKonserPage() {
               </option>
             ))}
           </select>
+          <select
+            className="px-3 py-2 border rounded-md bg-background text-sm"
+            value={jumlahAktif ?? ""}
+            onChange={(e) => setJumlahAktif(e.target.value || null)}
+          >
+            <option value="">🎫 Semua Jumlah</option>
+            {[1, 2, 3, 4, 5].map((jml) => (
+              <option key={jml} value={jml}>
+                {jml} Tiket
+              </option>
+            ))}
+          </select>
 
           <Separator orientation="vertical" className="h-5" />
-
           {[true, false].map((val) => (
             <Badge
               key={String(val)}
@@ -164,121 +223,166 @@ export default function TiketByKonserPage() {
 
           <Separator orientation="vertical" className="h-5" />
 
-          {/* Sort */}
           <Badge
-            onClick={() => setSortBy("populer")}
+            onClick={() => setSortBy("terpopuler")}
             className={cn(
               "cursor-pointer",
-              sortBy === "populer"
+              sortBy === "terpopuler"
                 ? "border border-white text-white"
                 : "border border-muted-foreground/20 text-muted-foreground"
             )}
           >
             🔥 Terpopuler
           </Badge>
+
           <Badge
-            onClick={() => setSortBy("mauhabis")}
+            onClick={() => setSortBy("terbaru")}
             className={cn(
               "cursor-pointer",
-              sortBy === "mauhabis"
+              sortBy === "terbaru"
                 ? "border border-white text-white"
                 : "border border-muted-foreground/20 text-muted-foreground"
             )}
           >
-            ⏳ Mau Habis
+            🆕 Terbaru
           </Badge>
-          {sortBy === "murah" ? (
-            <select
-              className="px-3 py-1 text-sm rounded-md border bg-background text-black dark:text-white border-white dark:bg-muted"
-              value={hargaMurahMode}
-              onChange={(e) =>
-                setHargaMurahMode(e.target.value as "total" | "satuan")
-              }
-            >
-              <option value="total">💰 Total</option>
-              <option value="satuan">💡 Satuan</option>
-            </select>
-          ) : (
-            <Badge
-              onClick={() => setSortBy("murah")}
-              className="cursor-pointer border border-muted-foreground/20 text-muted-foreground"
-            >
-              💰 Termurah
-            </Badge>
-          )}
         </div>
 
-        {/* 👉 Header kolom */}
         <Card className="p-4 flex items-center justify-between gap-4 bg-gray-100 border-b text-xs uppercase font-semibold text-black tracking-wide">
           <div className="flex items-center gap-6 flex-wrap w-full">
-            <div className="w-[120px]">Total Harga</div>
-            <div className="w-[150px]">Harga Satuan</div>
+            <div
+              className="w-[150px] cursor-pointer"
+              onClick={() =>
+                setSortBy(
+                  sortBy === "termurah_satuan"
+                    ? "termahal_satuan"
+                    : "termurah_satuan"
+                )
+              }
+            >
+              Harga Satuan
+            </div>
+            <div
+              className="w-[120px] cursor-pointer"
+              onClick={() =>
+                setSortBy(
+                  sortBy === "termurah_total"
+                    ? "termahal_total"
+                    : "termurah_total"
+                )
+              }
+            >
+              Total Harga
+            </div>
             <div className="w-[100px]">Kategori</div>
-            <div className="w-[100px]">Sisa Waktu</div>
+            <div
+              className="w-[100px] cursor-pointer"
+              onClick={() =>
+                setSortBy(sortBy === "mauhabis" ? "populer" : "mauhabis")
+              }
+            >
+              Sisa Waktu
+            </div>
             <div className="w-[130px]">Jumlah Tiket</div>
           </div>
-         
         </Card>
 
-        {/* List Tiket */}
-        <div className="overflow-y-auto max-h-[65vh] pr-1 scrollable-container">
-
-       
-        <div className="space-y-3">
-          {tiketTerfilter.map((tiket) => {
-            const hargaTotal =
-              tiket.metode === "LELANG"
-                ? tiket.harga_bid ?? tiket.harga_awal
-                : tiket.harga_beli;
-            const hargaSatuan = hargaTotal / tiket.jumlah;
-            const labelSebelah = tiket.sebelahan ? "(Bersama)" : "(Terpisah)";
-            const jamSisa = tiket.batas_waktu
-              ? (new Date(tiket.batas_waktu).getTime() - Date.now()) /
-                (1000 * 60 * 60)
-              : null;
-            const waktu = jamSisa !== null ? formatCountdown(jamSisa) : "-";
-
-            let waktuClass = "text-foreground";
-            if (jamSisa !== null) {
-              if (jamSisa <= 1) waktuClass = "text-red-500 animate-blink-fast";
-              else if (jamSisa <= 3)
-                waktuClass = "text-red-500 animate-blink-slow";
-              else if (jamSisa <= 6) waktuClass = "text-red-500";
-              else if (jamSisa <= 12) waktuClass = "text-yellow-500";
-            }
-
-            return (
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
               <Card
-                key={tiket.id}
-                className="p-4 flex items-center justify-between gap-4"
+                key={i}
+                className="p-4 animate-pulse flex items-center justify-between gap-4 bg-yellow-50 border border-yellow-200 shadow"
               >
-                <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
-                  <div className="w-[120px] font-bold text-base text-foreground">
-                    Rp {hargaTotal.toLocaleString()}
+                <div className="flex items-center gap-6 text-sm flex-wrap w-full">
+                  <div className="w-[150px] h-4 rounded bg-pink-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">🎫</span>
                   </div>
-
-                  <div className="w-[150px]">
-                    Rp {hargaSatuan.toLocaleString()} / tiket
+                  <div className="w-[120px] h-4 rounded bg-blue-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">💰</span>
                   </div>
-                  <div className="w-[100px]">{tiket.kategori}</div>
-                  <div className={cn("w-[100px] font-medium", waktuClass)}>
-                    {waktu}
+                  <div className="w-[100px] h-4 rounded bg-green-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">🎶</span>
                   </div>
-                  <div className="w-[130px] whitespace-nowrap overflow-hidden text-ellipsis">
-                    {tiket.jumlah} tiket {labelSebelah}
+                  <div className="w-[100px] h-4 rounded bg-purple-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">⏳</span>
+                  </div>
+                  <div className="w-[130px] h-4 rounded bg-orange-200 flex items-center justify-center">
+                    <span className="text-xs opacity-40">👥</span>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {tiket.metode === "LELANG" ? "Bid" : "Beli"}
-                </Button>
+                <div className="w-16 h-8 rounded bg-green-300 flex items-center justify-center animate-bounce">
+                  🎉
+                </div>
               </Card>
-            );
-          })}
-        </div>
-        </div>
+            ))}
+          </div>
+        ) : tiketList.length === 0 ? (
+          <div className="text-center text-muted-foreground py-10">
+            <div className="text-4xl mb-4">😶</div>
+            <h2 className="text-lg font-semibold">
+              Belum ada tiket yang cocok
+            </h2>
+            <p className="text-sm">Coba ubah filter atau pilih kategori lain</p>
+          </div>
+        ) : (
+          <div className="overflow-y-auto max-h-[65vh] pr-1 scrollable-container">
+            <div className="space-y-3">
+              {tiketList.map((tiket) => {
+                const hargaTotal = tiket.hargaTotal;
+                const hargaSatuan = tiket.hargaSatuan;
+                const jamSisa = tiket.batas_waktu
+                  ? (new Date(tiket.batas_waktu).getTime() - Date.now()) /
+                    (1000 * 60 * 60)
+                  : null;
+                const waktu = jamSisa !== null ? formatCountdown(jamSisa) : "-";
+                const waktuClass =
+                  jamSisa !== null
+                    ? jamSisa <= 1
+                      ? "text-red-500 animate-blink-fast"
+                      : jamSisa <= 3
+                      ? "text-red-500 animate-blink-slow"
+                      : jamSisa <= 6
+                      ? "text-red-500"
+                      : jamSisa <= 12
+                      ? "text-yellow-500"
+                      : "text-foreground"
+                    : "text-foreground";
+
+                return (
+                  <Card
+                    key={tiket.id}
+                    className="p-4 flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
+                      <div className="w-[150px] font-bold text-base text-foreground">
+                        Rp {hargaSatuan.toLocaleString()}
+                      </div>
+                      <div className="w-[120px]">
+                        Rp {hargaTotal.toLocaleString()}
+                      </div>
+                      <div className="w-[100px]">{tiket.kategori.nama}</div>
+                      <div className={cn("w-[100px] font-medium", waktuClass)}>
+                        {waktu}
+                      </div>
+                      <div className="w-[130px] whitespace-nowrap overflow-hidden text-ellipsis">
+                        {tiket.jumlah} tiket{" "}
+                        {tiket.sebelahan ? "(Bersama)" : "(Terpisah)"}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => router.push(`/ticketv2/${tiket.id}`)}
+                    >
+                      {tiket.kelipatan ? "Bid" : "Beli"}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

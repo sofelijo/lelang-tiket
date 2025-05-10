@@ -1,6 +1,6 @@
-//app/tambah-tiket/page.tsx
+//app/tambah-tiket/TambahTickeClient.tsx
 "use client";
-
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,24 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function TambahTiketPage() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const stepParam = searchParams.get("step");
+    const konserIdParam = searchParams.get("konserId");
+  
+    if (stepParam === "2" && konserIdParam) {
+      // fetch konser dari API
+      fetch(`/api/konser/${konserIdParam}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSelectedKonser(data);
+          setStep(2);
+        })
+        .catch((err) => {
+          console.error("Gagal ambil konser dari query:", err);
+        });
+    }
+  }, [searchParams]);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);

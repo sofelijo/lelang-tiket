@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -118,7 +118,6 @@ export default function DetailTiketPage() {
   const imageUrl = encodedPath.startsWith("/uploads/")
     ? encodedPath
     : "/images/default-avatar.png";
-  
 
   const total = bidAmount;
   const feePlatform = Math.max(Math.floor(total * 0.03), 37000);
@@ -131,9 +130,7 @@ export default function DetailTiketPage() {
   const totalBidTertinggi = bidTertinggi
     ? bidTertinggi.amount + feePlatform
     : 0;
-  const penjualSelesai = ticket.user._count?.tiketSelesai || 0;
-  
-
+  const penjualSelesai = ticket.user.tickets?.length || 0;
 
   return (
     <main className="p-6">
@@ -186,16 +183,18 @@ export default function DetailTiketPage() {
               <Card className="flex items-stretch overflow-hidden">
                 {/* Gambar user */}
                 <img
-                   src={imageUrl}
+                  src={imageUrl}
                   alt="Foto Penjual"
                   className="max-h-20 w-20 object-cover rounded-l-xl"
                 />
 
                 {/* Konten Tengah */}
                 <div className="flex-1 p-4 space-y-1">
-                  <div className="text-base font-bold text-black">
-                    @{ticket.user.username}
-                  </div>
+                  <Link href={`/username/${ticket.user.username}`}>
+                    <div className="text-base font-bold text-black cursor-pointer hover:underline">
+                      @{ticket.user.username}
+                    </div>
+                  </Link>
                   <div className="text-sm text-muted-foreground">
                     Sejak{" "}
                     {new Date(ticket.user.createdAt).toLocaleDateString(
@@ -211,7 +210,7 @@ export default function DetailTiketPage() {
                 {/* Terjual */}
                 <div className="p-4 text-right">
                   <div className="text-xl font-bold text-green-600">
-                    📈 {ticket.user._count?.ticketsTerjual || 0}
+                    📈 {penjualSelesai}
                   </div>
                   <div className="text-xs text-muted-foreground">Terjual</div>
                 </div>
@@ -268,15 +267,21 @@ export default function DetailTiketPage() {
                   >
                     <span>💰 {formatHarga(bid.amount)}</span>
                     <span className="text-muted-foreground">
-                      @{bid.user?.username ?? "anonim"} •{" "}
-                      {new Date(bid.createdAt).toLocaleDateString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                      })}{" "}
-                      {new Date(bid.createdAt).toLocaleTimeString("id-ID", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {bid.user?.username ?? "anonim"} •{" "}
+                      {(() => {
+                        const tgl = new Date(bid.createdAt);
+                        const day = String(tgl.getDate()).padStart(2, "0");
+                        const month = String(tgl.getMonth() + 1).padStart(
+                          2,
+                          "0"
+                        );
+                        const hour = String(tgl.getHours()).padStart(2, "0");
+                        const minute = String(tgl.getMinutes()).padStart(
+                          2,
+                          "0"
+                        );
+                        return `${day}/${month} ${hour}:${minute}`;
+                      })()}
                     </span>
                   </div>
                 ))
@@ -358,7 +363,11 @@ export default function DetailTiketPage() {
         </div>
 
         <div>
-          <CommentSection itemId={String(ticket.id)} itemType="ticket" />
+          <CommentSection
+            itemId={ticket.id}
+            itemType="ticket"
+            sellerId={ticket.user.id}
+          />
         </div>
       </div>
     </main>

@@ -38,14 +38,13 @@ export async function GET(
             name: true,
             username: true,
             createdAt: true,
-            image : true,
-            _count: {
+            image: true,
+            tickets: {
+              where: {
+                statusLelang: "SELESAI",
+              },
               select: {
-                tickets: {
-                  where: {
-                    statusLelang: "SELESAI",
-                  },
-                },
+                id: true,
               },
             },
           },
