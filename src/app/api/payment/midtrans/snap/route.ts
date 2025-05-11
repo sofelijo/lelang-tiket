@@ -29,22 +29,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pembayaran atau tiket tidak ditemukan" }, { status: 404 });
   }
 
-  const ticket = pembayaran.ticket;
-  const hargaTiket = ticket.harga_beli || 0;
-  const rawPlatform = Math.ceil(hargaTiket * 0.03);
-  const feePlatform = Math.max(rawPlatform, 27000);
-
-  let feeMetode = 0;
-  if (metodeSnap === "credit_card") {
-    feeMetode = Math.ceil(hargaTiket * 0.05) + 5000;
-  } else if (metodeSnap === "qris") {
-    feeMetode = Math.ceil(hargaTiket * 0.01);
-  } else if (metodeSnap === "bank_transfer" || metodeSnap === "cstore") {
-    feeMetode = 10000;
+  if (!pembayaran.order_id) {
+    return NextResponse.json({ error: "Order ID tidak tersedia" }, { status: 400 });
   }
 
-  const kodeUnik = Math.floor(100 + Math.random() * 900);
-  const total = hargaTiket + feePlatform + feeMetode + kodeUnik;
+  const ticket = pembayaran.ticket;
+  const hargaTiket = ticket.harga_beli ?? 0;
+  const feePlatform = pembayaran.feePlatform ?? 0;
+  const feeMetode = pembayaran.feeMetode ?? 0;
+  const feeFlat = pembayaran.feeMetodeFlat ?? 0;
+  const kodeUnik = pembayaran.kodeUnik ?? 0;
+
+  const total = hargaTiket + feePlatform + feeMetode + feeFlat + kodeUnik;
 
   const snap = new midtransClient.Snap({
     isProduction: false,
@@ -69,16 +65,40 @@ export async function POST(req: NextRequest) {
 
   const parameter: any = {
     transaction_details: {
-      order_id: pembayaran.order_id!,
+      order_id: pembayaran.order_id,
       gross_amount: total,
     },
     enabled_payments: [metodeSnap],
     item_details: [
       {
-        id: `${ticket.id}`,
+        id: `item_tiket_${ticket.id}`,
         name: `Tiket ${ticket.konser.nama}`,
         quantity: 1,
-        price: total,
+        price: hargaTiket,
+      },
+      {
+        id: `item_platform`,
+        name: "Fee Platform",
+        quantity: 1,
+        price: feePlatform,
+      },
+      {
+        id: `item_fee_persen`,
+        name: "Fee Payment (Persen)",
+        quantity: 1,
+        price: feeMetode,
+      },
+      {
+        id: `item_fee_flat`,
+        name: "Fee Transaksi Tetap",
+        quantity: 1,
+        price: feeFlat,
+      },
+      {
+        id: `item_kode_unik`,
+        name: "Kode Unik",
+        quantity: 1,
+        price: kodeUnik,
       },
     ],
     customer_details: {
@@ -106,13 +126,8 @@ export async function POST(req: NextRequest) {
       prisma.pembayaran.update({
         where: { id: pembayaran.id },
         data: {
-          snapMethod: metodeSnap,
-          qrisExpiredAt: expiredAt,
-          feePlatform,
-          feeMetode,
-          kodeUnik,
-          jumlahTotal: total,
           snapToken: transaction.token,
+          qrisExpiredAt: expiredAt,
         },
       }),
       prisma.ticket.update({
@@ -126,8 +141,4 @@ export async function POST(req: NextRequest) {
     console.error("Midtrans Snap Error:", error);
     return NextResponse.json({ error: "Gagal membuat Snap Token" }, { status: 500 });
   }
-}
-
-function metodeToMidtrans(m: string): string {
-  return m;
 }

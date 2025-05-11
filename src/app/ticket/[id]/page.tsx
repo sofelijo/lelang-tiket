@@ -1,277 +1,379 @@
-// app/ticket/[id]/page.tsx
-
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import CommentSection from "@/app/components/lainnya/CommentSection";
-import { Ticket } from "@/lib/types";
+import { useParams, useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import BuyTicketModal from "@/app/components/lainnya/BuyTicketModal";
-import CountdownTimer from "@/app/components/lainnya/CountdownTimer";
+import { cn } from "@/lib/utils";
+import CommentSection from "@/app/components/lainnya/CommentSection";
 
-// Label status
-const statusLabels: Record<"PENDING" | "BERLANGSUNG" | "SELESAI", string> = {
-  PENDING: "Belum mulai",
-  BERLANGSUNG: "Lagi rameee",
-  SELESAI: "Udah bubar",
-};
-
-export default function TicketDetailPage() {
-  const params = useParams();
+export default function DetailTiketPage() {
+  const { id } = useParams();
+  const router = useRouter();
   const { toast } = useToast();
-  const id = Array.isArray(params?.id) ? params.id[0] : params?.id ?? "";
-
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [amount, setAmount] = useState("");
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isBuying, setIsBuying] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const fetchTicket = async () => {
-    try {
-      const res = await fetch(`/api/ticket/${id}`);
-      if (!res.ok) throw new Error("Gagal ambil data tiket");
-      const data = await res.json();
-      setTicket(data);
-    } catch (err) {
-      console.error("Error fetching ticket:", err);
-      setError("Data tiket tidak ditemukan.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [ticket, setTicket] = useState<any>(null);
+  const [bidAmount, setBidAmount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [estimasiBidTertinggi, setEstimasiBidTertinggi] = useState<any>(null);
+  const [estimasiUserBid, setEstimasiUserBid] = useState<any>(null);
+  const [isLoadingBid, setIsLoadingBid] = useState(false);
+  const [isLoadingBuy, setIsLoadingBuy] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchTicket();
+    async function fetchData() {
+      const res = await fetch(`/api/ticket/${id}`);
+      const data = await res.json();
+      setTicket(data);
     }
+    if (id) fetchData();
   }, [id]);
 
-  const handleBid = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
+  const penjualTerjual = ticket?.user?.tickets?.reduce(
+    (acc: number, t: any) => acc + (t.jumlah ?? 0),
+    0
+  );
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!ticket?.batas_waktu) return;
+      const selisih = Math.floor(
+        (new Date(ticket.batas_waktu).getTime() - Date.now()) / 1000
+      );
+      setTimeLeft(Math.max(selisih, 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [ticket]);
+
+  useEffect(() => {
+    if (ticket) {
+      const lastBid = ticket.bids?.[0]?.amount ?? null;
+      const min = lastBid ? lastBid + ticket.kelipatan : ticket.harga_awal;
+      setBidAmount(min);
+
+      // Estimasi untuk bid tertinggi
+      const hargaDasar = lastBid ?? ticket.harga_awal;
+      fetch(
+        `/api/pembayaran/estimasi?ticketId=${ticket.id}&mode=termurah-all&harga_dasar=${hargaDasar}`
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          const termurah = Array.isArray(data) ? data[0] : null;
+          if (termurah) setEstimasiBidTertinggi(termurah);
+        });
+    }
+  }, [ticket]);
+
+  useEffect(() => {
+    if (!ticket || !bidAmount) return;
+    fetch(
+      `/api/pembayaran/estimasi?ticketId=${ticket.id}&mode=termurah-all&harga_dasar=${bidAmount}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const termurah = Array.isArray(data) ? data[0] : null;
+        if (termurah) setEstimasiUserBid(termurah);
+      });
+  }, [bidAmount, ticket]);
+
+  const formatCountdown = (s: number) => {
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const seconds = s % 60;
+    return `${days}D ${String(hours).padStart(2, "0")}H ${String(
+      minutes
+    ).padStart(2, "0")}M ${String(seconds).padStart(2, "0")}S`;
+  };
+
+  const formatHarga = (value: number) => {
+    return "Rp " + value.toLocaleString("id-ID");
+  };
+
+  const handleBid = async () => {
     if (!ticket) return;
-
-    const bidAmount = parseInt(amount);
-    if (isNaN(bidAmount) || bidAmount <= ticket.harga_awal) {
-      setMessage({
-        type: "error",
-        text: "Penawaran harus lebih tinggi dari harga awal",
+    if (!bidAmount || bidAmount < ticket.harga_awal) {
+      toast({
+        title: "❌ Gagal bid",
+        description: "💸 Bid harus lebih tinggi dari harga awal yaa",
+        variant: "destructive",
       });
       return;
     }
-
+    setIsLoadingBid(true);
     try {
       const res = await fetch("/api/bid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId: ticket.id, amount: bidAmount }),
       });
-      const data = await res.json();
-
-      if (res.ok) {
-        await fetchTicket();
-        setAmount("");
-        setMessage({ type: "success", text: "Penawaran berhasil dikirim!" });
-      } else {
-        throw new Error(data.message || "Gagal mengirim penawaran");
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: (error as Error).message });
-    }
-  };
-
-  const handleBuyNow = async () => {
-    if (!ticket?.harga_beli) return;
-
-    setIsBuying(true);
-    try {
-      const res = await fetch("/api/buy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketId: ticket.id }),
-      });
-      const data = await res.json();
-
       if (res.ok) {
         toast({
-          title: "🎉 Tiket berhasil dibeli!",
-          description: "Tiketmu sudah aman. Cek di halaman profil.",
+          title: "🎯 Bid berhasil dikirim!",
+          description: formatHarga(bidAmount) + " udah masuk gan!",
         });
-        await fetchTicket();
-        setIsModalOpen(false);
+        const updated = await fetch(`/api/ticket/${id}`);
+        const refreshed = await updated.json();
+        setTicket(refreshed);
       } else {
-        throw new Error(data.message || "Gagal membeli tiket");
+        const data = await res.json();
+        throw new Error(data.message || "Gagal bid, coba lagi yaa");
       }
-    } catch (err) {
+    } catch (err: any) {
       toast({
+        title: "❌ Gagal bid",
+        description: err.message,
         variant: "destructive",
-        title: "Gagal membeli tiket",
-        description: (err as Error).message || "Terjadi kesalahan",
       });
     } finally {
-      setIsBuying(false);
+      setIsLoadingBid(false);
     }
   };
 
-  if (loading)
-    return (
-      <div className="p-8 text-center text-gray-300">⏳ Loading tiket...</div>
-    );
+  const handleBuy = () => {
+    if (!ticket?.id) return;
+    setIsLoadingBuy(true);
+    router.push(`/bayar/${ticket.id}`);
+  };
 
-  if (error || !ticket)
-    return <div className="p-8 text-center text-red-400">{error}</div>;
+  if (!ticket) return <div className="p-6">⏳ Loading tiket...</div>;
 
-  const statusColor = {
-    PENDING: "text-yellow-400",
-    BERLANGSUNG: "text-green-400",
-    SELESAI: "text-red-400",
-  }[ticket.statusLelang] || "text-white";
+  const penjualSelesai = ticket.user.tickets?.length || 0;
+  const bidTertinggi = ticket.bids?.[0];
+  const encodedPath = encodeURI(ticket.user?.image || "");
+  const imageUrl = encodedPath.startsWith("/uploads/")
+    ? encodedPath
+    : "/images/default-avatar.png";
 
   return (
-    <div className="p-6 md:p-12 text-white bg-gradient-to-b from-black to-gray-900 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Detail Tiket */}
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold">
-            {ticket.konser.nama} - {ticket.kategori.nama}
-          </h1>
-          <div className="text-gray-400">
-            {ticket.konser.lokasi} | {new Date(ticket.konser.tanggal).toLocaleDateString()}
-          </div>
-          <div className="flex flex-wrap gap-4 mt-4">
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-              💺 Seat: {ticket.seat ?? "Bebas"}
-            </span>
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-              🏟️ Tempat: {ticket.tipeTempat}
-            </span>
-            <span className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-              🎟️ Jumlah: {ticket.jumlah}
-            </span>
-          </div>
-          <p className="text-lg">
-            💰 <span className="font-semibold">Harga Awal:</span> Rp{ticket.harga_awal.toLocaleString()}
-          </p>
-          {ticket.harga_beli && (
-            <p className="text-lg">
-              🛒 <span className="font-semibold">Harga Beli Langsung:</span> Rp{ticket.harga_beli.toLocaleString()}
-            </p>
-          )}
-          <p className="text-lg">
-            ⏰ Batas Waktu: {new Date(ticket.batas_waktu).toLocaleString()}
-          </p>
-
-          <CountdownTimer endTime={new Date(ticket.batas_waktu)} />
-
-          {ticket.deskripsi && (
-            <p className="text-gray-300 italic mt-2">📝 {ticket.deskripsi}</p>
-          )}
-          <p className="mt-4 font-semibold">
-            Status Lelang:{" "}
-            <span className={`${statusColor} font-bold`}>
-              {statusLabels[ticket.statusLelang]}
-            </span>
-          </p>
+    <main className="p-6">
+      {typeof timeLeft === "number" && (
+        <div className="text-center text-sm font-semibold text-red-500">
+          ⏳ Sisa waktu lelang: {formatCountdown(timeLeft)}
         </div>
-
-        {/* Form Penawaran */}
-        {ticket.statusLelang === "BERLANGSUNG" && (
-          <div className="bg-gray-800 rounded-xl p-6 shadow-lg space-y-4">
-            <form onSubmit={handleBid} className="space-y-4">
-              <label className="block font-semibold">Tawar Harga</label>
-              <input
-                type="number"
-                min={ticket.harga_awal + 1}
-                className="p-3 rounded bg-gray-700 text-white w-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Masukkan tawaran Anda"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-              />
-              <button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 transition px-4 py-3 rounded-lg font-bold text-lg"
+      )}
+      <div className="max-w-screen-xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-3">
+          <Card className="p-0 overflow-hidden h-full">
+            <img
+              src={ticket.konser.image || "/dummy-konser.jpg"}
+              alt="Gambar konser"
+              className="w-full h-200 object-cover"
+            />
+            <div className="p-4 space-y-2">
+              <a
+                href={`/konser/${ticket.konser.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg font-bold text-black hover:text-green-600"
               >
-                🚀 Kirim Tawaran
-              </button>
-            </form>
+                🎤 {ticket.konser.nama}
+              </a>
 
-            {ticket.harga_beli && (
-              <>
-                <button
-                  type="button"
-                  className="w-full bg-blue-600 hover:bg-blue-700 transition px-4 py-3 rounded-lg font-bold text-lg"
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={isBuying}
-                >
-                  🛒 {isBuying ? "Memproses..." : "Beli Langsung"}
-                </button> 
-
-                {/* Modal Konfirmasi */}
-                <BuyTicketModal
-                  open={isModalOpen}
-                  onClose={() => setIsModalOpen(false)}
-                  ticketId={ticket?.id ?? ""}
-                />
-
-
-              </>
-            )}
-
-            {message && (
-              <p
-                className={`mt-4 font-semibold ${message.type === "success" ? "text-green-400" : "text-red-400"
-                  }`}
-              >
-                {message.text}
+              <p className="text-sm text-muted-foreground text-right">
+                📅 {new Date(ticket.konser.tanggal).toLocaleDateString()}
+                <br />
+                📍 {ticket.konser.venue}, {ticket.konser.lokasi}
               </p>
-            )}
-          </div>
-        )}
+              <Separator />
+              <div className="flex flex-wrap gap-3 mt-4">
+                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">
+                  {ticket.tipeTempat === "Duduk" ? "🪑 Duduk" : "💃🏼 Berdiri"}
+                </span>
+                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">
+                  💺 Seat: {ticket.seat ?? "Bebas"}
+                </span>
+                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">
+                  🎟️ {ticket.jumlah} Tiket
+                </span>
+                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">
+                  🎟️ {ticket.kategori.nama}
+                </span>
+                <span className="bg-gray-200 px-3 py-1 rounded-full text-sm">
+                  🎟️ {ticket.sebelahan ? "Sebelahan 👫" : "Terpisah 👋"}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground ">
+                <span className="font-semibold">{ticket.deskripsi} </span>
+              </p>
+              <Card className="flex items-stretch overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt="Foto Penjual"
+                  className="max-h-20 w-20 object-cover rounded-l-xl"
+                />
+                <div className="flex-1 p-4 space-y-1">
+                  <a
+                    href={`/username/${ticket.user.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-base font-bold text-black hover:text-green-600"
+                  >
+                    @{ticket.user.username}
+                  </a>
 
-        {/* Riwayat Penawaran */}
-        <div className="bg-gray-800 rounded-xl p-6 shadow-lg space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">📈 Riwayat Penawaran</h2>
-          {ticket.bids.length === 0 ? (
-            <p className="text-gray-400">Belum ada penawaran.</p>
-          ) : (
-            <ul className="space-y-3">
-              {ticket.bids.map((bid, i) => (
-                <li
-                  key={i}
-                  className="p-4 bg-gray-700 rounded-lg flex justify-between items-center"
+                  <div className="text-sm text-muted-foreground">
+                    Sejak{" "}
+                    {new Date(ticket.user.createdAt).toLocaleDateString(
+                      "id-ID",
+                      {
+                        year: "numeric",
+                        month: "long",
+                      }
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 text-right">
+                  <div className="text-xl font-bold text-green-600">
+                    📈 {penjualTerjual}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Terjual</div>
+                </div>
+              </Card>
+              <p className="text-xs text-muted-foreground text-center">
+                🔥Gk sabar? mau beli langsung?👇
+              </p>
+              <div className="flex gap-2 pt-3">
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white flex-1"
+                  onClick={handleBuy}
+                  disabled={isLoadingBuy}
                 >
-                  <div>
-                    <div className="font-semibold">
-                      💰 Rp{bid.amount.toLocaleString()}
+                  {isLoadingBuy ? (
+                    "Loading..."
+                  ) : (
+                    <div className="text-xs leading-tight text-center">
+                      Beli Langsung
+                      <br />
+                      <span className="text-sm font-bold">
+                        {formatHarga(ticket.harga_beli)}
+                      </span>
                     </div>
-                    <div className="text-gray-400 text-sm">
-                      👤 {bid.user?.name ?? "Anonim"}
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    🕒 {new Date(bid.createdAt).toLocaleString()}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {/* Komentar */}
-        <div className="bg-gray-800 rounded-xl p-6 shadow-lg space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">💬 Komentar</h2>
-          <CommentSection itemId={String(ticket.id)} itemType="ticket" />
+        <div className="space-y-4">
+          <Card className="p-4 space-y-4 h-full min-h-[500px] flex flex-col justify-between">
+            {estimasiBidTertinggi && (
+              <div className="text-sm font-medium text-green-600">
+                💰 Estimasi total bid tertinggi:{" "}
+                {formatHarga(estimasiBidTertinggi.totalBayar)}
+              </div>
+            )}
+            <div className="bg-muted rounded-md p-3 h-64 overflow-y-auto space-y-2 border border-muted-foreground/10">
+              <h3 className="font-semibold text-sm">📈 Riwayat Tawaran</h3>
+              {ticket.bids.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Belum ada yang ngebid 😢
+                </p>
+              ) : (
+                ticket.bids.map((bid: any, i: number) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex justify-between text-sm border-b last:border-none pb-1",
+                      i === 0 && "font-bold text-green-600"
+                    )}
+                  >
+                    <span>💰 {formatHarga(bid.amount)}</span>
+                    <span className="text-muted-foreground">
+                      {bid.user?.username ?? "anonim"} • {/* waktu */}
+                      {(() => {
+                        const tgl = new Date(bid.createdAt);
+                        return `${tgl.getDate()}/${
+                          tgl.getMonth() + 1
+                        } ${tgl.getHours()}:${String(tgl.getMinutes()).padStart(
+                          2,
+                          "0"
+                        )}`;
+                      })()}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="text-sm text-muted-foreground">
+                <p>🏁 Harga Awal: {formatHarga(ticket.harga_awal)}</p>
+                <p>💸 Kelipatan: {formatHarga(ticket.kelipatan)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-black bg-gray-200"
+                  onClick={() =>
+                    setBidAmount((prev) =>
+                      Math.max(prev - ticket.kelipatan, ticket.harga_awal)
+                    )
+                  }
+                  disabled={bidAmount <= ticket.harga_awal}
+                >
+                  -
+                </Button>
+                <input
+                  type="text"
+                  value={formatHarga(bidAmount)}
+                  onChange={(e) =>
+                    setBidAmount(Number(e.target.value.replace(/\D/g, "")))
+                  }
+                  onWheel={(e) => e.currentTarget.blur()}
+                  className="border px-4 py-2 rounded w-full text-center bg-background text-foreground"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-black bg-gray-200"
+                  onClick={() =>
+                    setBidAmount((prev) => prev + ticket.kelipatan)
+                  }
+                >
+                  +
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                💡 Harga per tiket (estimasi):{" "}
+                {estimasiUserBid
+                  ? formatHarga(estimasiUserBid.hargaPerTiket)
+                  : "-"}
+              </div>
+              <div className="text-sm font-medium">
+                💰 Estimasi total bayar:{" "}
+                {estimasiUserBid
+                  ? formatHarga(estimasiUserBid.totalBayar)
+                  : "-"}
+                <p className="text-xs text-muted-foreground">
+                  *Udah all-in gengs! Termasuk 3% platform + fee transfer 😎
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleBid}
+                  disabled={isLoadingBid}
+                  className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                >
+                  {isLoadingBid ? "Loading..." : "Bid Sekarang"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div>
+          <CommentSection
+            itemId={ticket.id}
+            itemType="ticket"
+            sellerId={ticket.user.id}
+          />
         </div>
       </div>
-    </div>
+    </main>
   );
 }

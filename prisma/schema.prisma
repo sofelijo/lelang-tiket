@@ -118,9 +118,12 @@ model Pembayaran {
   buyerId                  Int
   snapMethod                   String?
   feeMetode                Int?
+  feeMetodeFlat             Int?
   jumlahTotal             Int
   kodeUnik                 Int?
   feePlatform              Int
+  hargaTiket Int? // diisi saat create pembayaran (hasil final, udah dihitung backend)
+
   statusPembayaran         StatusPembayaran @default(PENDING)
   tanggalTransferKePenjual DateTime?
   createdAt                DateTime         @default(now())
@@ -214,3 +217,16 @@ model Notifikasi {
   createdAt DateTime @default(now())                // Tanggal buat notif
 }
 
+
+model Banner {
+  id          Int      @id @default(autoincrement())
+  title       String
+  imageUrl    String
+  link        String?     // Link tujuan saat banner diklik
+  isActive    Boolean  @default(true)
+  urutan      Int      @default(0)
+  startDate   DateTime?   // Kapan mulai tampil (opsional)
+  endDate     DateTime?   // Kapan selesai tampil (opsional)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

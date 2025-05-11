@@ -18,10 +18,10 @@ export async function GET() {
         venue : k.venue,
         image : k.image,
         jumlahTiket: k.tiket.length,
-        tipeTempat: k.tiket[0]?.tipeTempat ?? "berdiri",
+        
       }))
       .sort((a, b) => b.jumlahTiket - a.jumlahTiket)
-      .slice(0, 6);
+      .slice(0, 8);
 
     return NextResponse.json(sorted);
   } catch (error) {

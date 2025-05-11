@@ -29,8 +29,6 @@ export default function PembayaranPage() {
       try {
         const res = await fetch(`/api/pembayaran/${pembayaranId}`);
         const data = await res.json();
-        console.log("📦 Data Pembayaran dari Backend:", data);
-
         setPembayaran(data);
 
         if (!data.snapToken) {
@@ -43,14 +41,10 @@ export default function PembayaranPage() {
             }),
           });
           const snapData = await snapRes.json();
-          console.log("📦 Snap token baru:", snapData.token);
-
           if (snapData.token) {
             setSnapToken(snapData.token);
-
             const refreshed = await fetch(`/api/pembayaran/${pembayaranId}`);
             const refreshedData = await refreshed.json();
-            console.log("🔄 Data Pembayaran Setelah Snap:", refreshedData);
             setPembayaran(refreshedData);
           }
         } else {
@@ -70,17 +64,15 @@ export default function PembayaranPage() {
     fetchData();
   }, [pembayaranId]);
 
-  // 🔁 Auto-redirect ke Step 3 jika pembayaran berhasil
   useEffect(() => {
     if (pembayaran?.statusPembayaran === "BERHASIL") {
       setTimeout(() => {
         router.push(`/pembayaran/${pembayaranId}/konfirmasi`);
-      }, 2000); // kasih jeda 2 detik biar Snap sempat berubah
+      }, 2000);
     }
   }, [pembayaran?.statusPembayaran, pembayaranId, router]);
 
   useEffect(() => {
-    console.log("💥 Coba embed Snap:", { showContent, snapToken, scriptLoaded });
     if (
       showContent &&
       snapToken &&
@@ -92,14 +84,12 @@ export default function PembayaranPage() {
       (window as any).snap.embed(snapToken, {
         embedId: "midtrans-container",
         onSuccess: (result: any) => {
-          console.log("✅ success", result);
           router.push(`/pembayaran/${pembayaranId}/konfirmasi`);
         },
         onPending: (result: any) => console.log("⏳ pending", result),
         onError: (result: any) => console.error("❌ error", result),
         onClose: () => console.log("❎ popup closed"),
       });
-      
     }
   }, [showContent, snapToken, scriptLoaded]);
 
@@ -116,10 +106,6 @@ export default function PembayaranPage() {
     );
   }
 
-  console.log("🎯 feeMetode:", pembayaran.feeMetode, typeof pembayaran.feeMetode);
-  console.log("🎯 feePlatform:", pembayaran.feePlatform, typeof pembayaran.feePlatform);
-  console.log("🎯 jumlahTotal:", pembayaran.jumlahTotal, typeof pembayaran.jumlahTotal);
-
   return (
     <div className="max-w-xl mx-auto p-4">
       <Stepper step={2} />
@@ -131,15 +117,19 @@ export default function PembayaranPage() {
         <div className="text-sm space-y-1">
           <div className="flex justify-between">
             <span>🎫 Harga Tiket:</span>
-            <span>{formatRupiah(pembayaran.ticket?.harga_beli)}</span>
+            <span>{formatRupiah(pembayaran.hargaTiket)}</span>
           </div>
           <div className="flex justify-between">
             <span>📦 Fee Platform:</span>
             <span>{formatRupiah(pembayaran.feePlatform)}</span>
           </div>
           <div className="flex justify-between">
-            <span>💳 Fee Payment:</span>
+            <span>💳 Fee Payment (Persen):</span>
             <span>{formatRupiah(pembayaran.feeMetode)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>🧾 Fee Transaksi (Flat):</span>
+            <span>{formatRupiah(pembayaran.feeMetodeFlat)}</span>
           </div>
           <div className="flex justify-between">
             <span>🔢 Kode Unik:</span>
@@ -157,10 +147,7 @@ export default function PembayaranPage() {
           id="midtrans-script"
           src="https://app.sandbox.midtrans.com/snap/snap.js"
           data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
-          onLoad={() => {
-            console.log("🚀 Snap.js loaded");
-            setScriptLoaded(true);
-          }}
+          onLoad={() => setScriptLoaded(true)}
         />
       </Card>
     </div>

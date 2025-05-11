@@ -45,6 +45,7 @@ export async function GET(
               },
               select: {
                 id: true,
+                jumlah: true,
               },
             },
           },

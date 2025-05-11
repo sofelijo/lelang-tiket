@@ -10,12 +10,32 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-export default function LoginWaPage() {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [phone, setPhone] = useState("");
+export default function LoginPage() {
+  const [mode, setMode] = useState<'email' | 'wa'>('email');
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("62");
   const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const handleLoginEmail = async () => {
+    setLoading(true);
+    const res = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (res?.ok) {
+      toast.success("Berhasil login! Selamat datang kembali 🎉");
+      router.push("/");
+    } else {
+      toast.error("Email atau password salah 😭");
+    }
+    setLoading(false);
+  };
 
   const handleKirimOtp = async () => {
     if (!phone.startsWith("62")) {
@@ -42,7 +62,7 @@ export default function LoginWaPage() {
     }
   };
 
-  const handleLogin = async () => {
+  const handleLoginOtp = async () => {
     setLoading(true);
     const res = await signIn("wa-otp", {
       redirect: false,
@@ -56,73 +76,117 @@ export default function LoginWaPage() {
     } else {
       toast.error("OTP salah atau udah expired 😭");
     }
-
     setLoading(false);
   };
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex items-center px-4">
       <Card className="w-full p-6 shadow-xl">
-        <h1 className="text-2xl font-bold mb-2">🚀 Masuk via WhatsApp</h1>
+        <h1 className="text-2xl font-bold mb-2">
+          {mode === "email" ? "📧 Login Pakai Email" : "🚀 Masuk via WhatsApp"}
+        </h1>
         <p className="text-sm text-muted-foreground mb-4">
-          Gak usah ribet. Cukup masukin nomor WA dan kita kirim OTP-nya!
+          {mode === "email"
+            ? "Masuk pakai akun email kamu yang udah terdaftar."
+            : "Gak usah ribet. Cukup masukin nomor WA dan kita kirim OTP-nya!"}
         </p>
         <Separator className="mb-4" />
 
-        {step === 1 && (
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Nomor WhatsApp</label>
+        {mode === "email" && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleLoginEmail();
+            }}
+            className="space-y-3"
+          >
+            <label className="text-sm font-medium">Email</label>
             <Input
-              placeholder="Contoh: 6281234567890"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              placeholder="email@email.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
-            <Button
-              className="w-full"
-              onClick={handleKirimOtp}
-              disabled={loading || phone.length < 10}
-            >
-              {loading ? <Loader2 className="animate-spin" /> : "Kirim Kode OTP 🔐"}
+            <label className="text-sm font-medium">Password</label>
+            <Input
+              placeholder="Password kamu..."
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+            <Button type="submit" className="w-full" disabled={loading || !email || !password}>
+              {loading ? <Loader2 className="animate-spin" /> : "Login Sekarang 🚀"}
             </Button>
-          </div>
+          </form>
         )}
 
-        {step === 2 && (
+        {mode === "wa" && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              🔒 Kode OTP udah dikirim ke WhatsApp kamu.
-            </p>
-            <label className="text-sm font-medium">Masukkan Kode OTP</label>
-            <Input
-              placeholder="6 digit"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              disabled={loading}
-            />
-            <Button
-              className="w-full"
-              onClick={handleLogin}
-              disabled={loading || otp.length < 4}
-            >
-              {loading ? <Loader2 className="animate-spin" /> : "Masuk Sekarang 🚀"}
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-xs w-full"
-              onClick={() => setStep(1)}
-              disabled={loading}
-            >
-              🔁 Ganti Nomor
-            </Button>
+            {step === 1 && (
+              <>
+                <label className="text-sm font-medium">Nomor WhatsApp</label>
+                <Input
+                  placeholder="Contoh: 6281234567890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleKirimOtp}
+                  disabled={loading || phone.length < 10}
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : "Kirim Kode OTP 🔐"}
+                </Button>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  🔒 Kode OTP udah dikirim ke WhatsApp kamu.
+                </p>
+                <label className="text-sm font-medium">Masukkan Kode OTP</label>
+                <Input
+                  placeholder="6 digit"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  disabled={loading}
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleLoginOtp}
+                  disabled={loading || otp.length < 4}
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : "Masuk Sekarang 🚀"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-xs w-full"
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                >
+                  🔁 Ganti Nomor
+                </Button>
+              </>
+            )}
           </div>
         )}
 
         <div className="text-sm text-center text-muted-foreground mt-6">
-          Punya akun email?{" "}
-          <Button variant="link" size="sm" onClick={() => router.push("/login")}>
-            Login pakai email
-          </Button>
+          {mode === "email" ? (
+            <>
+              Pengen login cepat pake WA?{" "}
+              <Button variant="link" size="sm" onClick={() => setMode("wa")}>Login via WhatsApp</Button>
+            </>
+          ) : (
+            <>
+              Punya akun email?{" "}
+              <Button variant="link" size="sm" onClick={() => setMode("email")}>Login pakai email</Button>
+            </>
+          )}
         </div>
       </Card>
     </div>

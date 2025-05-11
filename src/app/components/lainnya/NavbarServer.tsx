@@ -56,7 +56,6 @@ function NavbarClient() {
       console.error("Gagal fetch notifikasi:", error);
     }
   };
-  
 
   // ✅ Ambil session user
   useEffect(() => {
@@ -201,11 +200,8 @@ function NavbarClient() {
 
         {/* Menu */}
         <div className="flex items-center gap-4 text-sm font-medium">
-          <Link href="/auction" className="hover:text-blue-400 transition">
-            Lelang
-          </Link>
-          <Link href="/market" className="hover:text-blue-400 transition">
-            Jual Beli
+          <Link href="/tambah-tiket" className="hover:text-blue-400 transition">
+            Listing Tiket
           </Link>
 
           {session?.user && (
@@ -267,38 +263,37 @@ function NavbarClient() {
 
               {/* 👤 Nama User */}
               <Popover>
-  <PopoverTrigger asChild>
-    <button className="hover:text-blue-400">
-      👤 {session.user.name || "Profil"}
-    </button>
-  </PopoverTrigger>
+                <PopoverTrigger asChild>
+                  <button className="hover:text-blue-400">
+                    👤 {session.user.name?.split(" ")[0] || "Profil"}
+                  </button>
+                </PopoverTrigger>
 
-  <PopoverContent className="w-56 p-2 space-y-1" align="end">
-    {ProfileSidebarItems(session.user).map((item) => (
-      <button
-        key={item.href}
-        onClick={() => {
-          router.push(item.href);
-          document.body.click(); // buat nutupin popover manual
-        }}
-        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted transition"
-      >
-        {item.icon} {item.label}
-      </button>
-    ))}
-    <hr className="my-1 border-muted" />
-    <button
-      onClick={async () => {
-        await fetch("/api/auth/signout", { method: "POST" });
-        router.push("/login");
-      }}
-      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition"
-    >
-      🚪 Logout
-    </button>
-  </PopoverContent>
-</Popover>
-
+                <PopoverContent className="w-56 p-2 space-y-1" align="end">
+                  {ProfileSidebarItems(session.user).map((item) => (
+                    <button
+                      key={item.href}
+                      onClick={() => {
+                        router.push(item.href);
+                        document.body.click(); // buat nutupin popover manual
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted transition"
+                    >
+                      {item.icon} {item.label}
+                    </button>
+                  ))}
+                  <hr className="my-1 border-muted" />
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/auth/signout", { method: "POST" });
+                      router.push("/login");
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition"
+                  >
+                    🚪 Logout
+                  </button>
+                </PopoverContent>
+              </Popover>
             </>
           )}
 

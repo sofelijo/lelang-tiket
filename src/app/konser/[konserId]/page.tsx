@@ -65,11 +65,65 @@ export default function TiketByKonserPage() {
         const tiketRes = await fetch(`/api/ticket/filter?${query}`);
         const konserData = await konserRes.json();
         const tiketData = await tiketRes.json();
+
+        const tiketWithEstimasi = await Promise.all(
+          tiketData.map(async (t: any) => {
+            try {
+              // 1. Hitung metode termurah
+              const resTermurah = await fetch(
+                `/api/pembayaran/estimasi?ticketId=${t.id}&mode=termurah-all&harga_dasar=${t.hargaTotal}`
+              );
+              const termurahList = await resTermurah.json();
+              const termurah = Array.isArray(termurahList)
+                ? termurahList[0]
+                : null;
+
+              if (!termurah?.metode) {
+                return {
+                  ...t,
+                  estimasiTotal: null,
+                  estimasiSatuan: null,
+                  estimasiMetode: null,
+                };
+              }
+
+              // 2. Hitung estimasi berdasarkan metode termurah
+              const resDetail = await fetch(
+                `/api/pembayaran/estimasi?ticketId=${t.id}&mode=detail&metode=${termurah.metode}&harga_dasar=${t.hargaTotal}`
+              );
+              const final = await resDetail.json();
+              // 🔍 Tambahkan log di sini
+              console.log("✅ Estimasi untuk Tiket:", {
+                id: t.id,
+                hargaTotal: t.hargaTotal,
+                estimasiTotal: final.totalBayar,
+                estimasiSatuan: final.hargaPerTiket,
+                metode: final.metode,
+              });
+              return {
+                ...t,
+                estimasiTotal: final.totalBayar,
+                estimasiSatuan: final.hargaPerTiket,
+                estimasiMetode: final.metode,
+              };
+            } catch (err) {
+              console.error(`❌ Gagal hitung estimasi tiket ${t.id}:`, err);
+              return {
+                ...t,
+                estimasiTotal: null,
+                estimasiSatuan: null,
+                estimasiMetode: null,
+              };
+            }
+          })
+        );
+
         setKonser(konserData);
-        setTiketList(tiketData);
+        setTiketList(tiketWithEstimasi);
       } catch (err) {
         console.error("Gagal fetch data konser/tiket:", err);
       }
+
       setLoading(false);
     }
 
@@ -356,11 +410,21 @@ export default function TiketByKonserPage() {
                   >
                     <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
                       <div className="w-[150px] font-bold text-base text-foreground">
-                        Rp {hargaSatuan.toLocaleString()}
+                        {typeof tiket.estimasiSatuan === "number"
+                          ? `Rp ${(
+                              Math.round(tiket.estimasiSatuan / 1000) * 1000
+                            ).toLocaleString()}`
+                          : "Rp -"}
                       </div>
+
                       <div className="w-[120px]">
-                        Rp {hargaTotal.toLocaleString()}
+                        {typeof tiket.estimasiTotal === "number"
+                          ? `Rp ${(
+                              Math.round(tiket.estimasiTotal / 1000) * 1000
+                            ).toLocaleString()}`
+                          : "Rp -"}
                       </div>
+
                       <div className="w-[100px]">{tiket.kategori.nama}</div>
                       <div className={cn("w-[100px] font-medium", waktuClass)}>
                         {waktu}
@@ -370,13 +434,18 @@ export default function TiketByKonserPage() {
                         {tiket.sebelahan ? "(Bersama)" : "(Terpisah)"}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => router.push(`/ticketv2/${tiket.id}`)}
+                    <a
+                      href={`/ticket/${tiket.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      {tiket.kelipatan ? "Bid" : "Beli"}
-                    </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white w-full"
+                      >
+                        {tiket.kelipatan ? "Bid" : "Beli"}
+                      </Button>
+                    </a>
                   </Card>
                 );
               })}
