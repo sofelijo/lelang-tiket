@@ -6,14 +6,15 @@ import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+
 import { cn } from "@/lib/utils";
 import CommentSection from "@/app/components/lainnya/CommentSection";
+import { toast } from "sonner";
 
 export default function DetailTiketPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { toast } = useToast();
+
   const [ticket, setTicket] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -95,11 +96,7 @@ export default function DetailTiketPage() {
   const handleBid = async () => {
     if (!ticket) return;
     if (!bidAmount || bidAmount < ticket.harga_awal) {
-      toast({
-        title: "❌ Gagal bid",
-        description: "💸 Bid harus lebih tinggi dari harga awal yaa",
-        variant: "destructive",
-      });
+      toast.error("💸 Bid harus lebih tinggi dari harga awal yaa");
       return;
     }
     setIsLoadingBid(true);
@@ -110,10 +107,9 @@ export default function DetailTiketPage() {
         body: JSON.stringify({ ticketId: ticket.id, amount: bidAmount }),
       });
       if (res.ok) {
-        toast({
-          title: "🎯 Bid berhasil dikirim!",
-          description: formatHarga(bidAmount) + " udah masuk gan!",
-        });
+        toast.success(
+          `🎯 Bid berhasil dikirim: ${formatHarga(bidAmount)} udah masuk gais!`
+        );
         const updated = await fetch(`/api/ticket/${id}`);
         const refreshed = await updated.json();
         setTicket(refreshed);
@@ -122,11 +118,7 @@ export default function DetailTiketPage() {
         throw new Error(data.message || "Gagal bid, coba lagi yaa");
       }
     } catch (err: any) {
-      toast({
-        title: "❌ Gagal bid",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast.error(`❌ Gagal bid: ${err.message}`);
     } finally {
       setIsLoadingBid(false);
     }
@@ -278,10 +270,16 @@ export default function DetailTiketPage() {
                     key={i}
                     className={cn(
                       "flex justify-between text-sm border-b last:border-none pb-1",
-                      i === 0 && "font-bold text-green-600"
+                      i === 0 && " text-green-600"
                     )}
                   >
-                    <span>💰 {formatHarga(bid.amount)}</span>
+                    <span>
+                      {" "}
+                      {i === 0 ? "🏆" : "💰"}{" "}
+                      <span className={i === 0 ? "font-bold" : ""}>
+                        {formatHarga(bid.amount)}
+                      </span>
+                    </span>
                     <span className="text-muted-foreground">
                       {bid.user?.username ?? "anonim"} • {/* waktu */}
                       {(() => {
@@ -314,10 +312,14 @@ export default function DetailTiketPage() {
                       Math.max(prev - ticket.kelipatan, ticket.harga_awal)
                     )
                   }
-                  disabled={bidAmount <= ticket.harga_awal}
+                  disabled={
+                    !ticket.harga_awal ||
+                    bidAmount <= (ticket.bids?.[0]?.amount ?? ticket.harga_awal)
+                  }
                 >
                   -
                 </Button>
+
                 <input
                   type="text"
                   value={formatHarga(bidAmount)}
@@ -346,13 +348,18 @@ export default function DetailTiketPage() {
               </div>
               <div className="text-sm font-medium">
                 💰 Estimasi total bayar:{" "}
-                {estimasiUserBid
-                  ? formatHarga(estimasiUserBid.totalBayar)
-                  : "-"}
-                <p className="text-xs text-muted-foreground">
+                {estimasiUserBid ? (
+                  <span className="text-green-600 font-bold">
+                    {formatHarga(estimasiUserBid.totalBayar)}
+                  </span>
+                ) : (
+                  "-"
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
                   *Udah all-in gengs! Termasuk 3% platform + fee transfer 😎
                 </p>
               </div>
+
               <div className="flex gap-2">
                 <Button
                   onClick={handleBid}
