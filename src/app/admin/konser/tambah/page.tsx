@@ -1,4 +1,3 @@
-// src/app/admin/konser/tambah/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import ImageUpload from "@/app/components/admin/ImageUpload";
+import ImageCropUploader from "@/app/components/admin/ImageCropUploader";
 
 interface Kategori {
   id: number;
@@ -15,13 +14,14 @@ interface Kategori {
 
 export default function TambahKonserPage() {
   const router = useRouter();
+  const [konserId, setKonserId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nama: "",
     lokasi: "",
     tanggal: "",
     venue: "",
     kategoriIds: [] as number[],
-    image: null as string | null, // ← tambahkan image di state
+    image: "" as string,
   });
   const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
 
@@ -40,13 +40,32 @@ export default function TambahKonserPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateKonser = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/admin/konser", {
+
+    const res = await fetch("/api/admin/konser", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, image: null }),
     });
+
+    const data = await res.json();
+    if (res.ok) {
+      setKonserId(data.konser.id); // setelah berhasil, aktifkan upload
+    } else {
+      alert("Gagal membuat konser");
+    }
+  };
+
+  const handleAfterUpload = async (filename: string) => {
+    if (!konserId) return;
+
+    await fetch(`/api/admin/konser/${konserId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, image: filename }),
+    });
+
     router.push("/admin/konser");
   };
 
@@ -54,11 +73,30 @@ export default function TambahKonserPage() {
     <div className="max-w-4xl mx-auto text-white space-y-6">
       <h2 className="text-2xl font-bold mb-4">Tambah Konser</h2>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleCreateKonser}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Kolom kiri: Upload Gambar */}
+          {/* Kolom kiri: Upload Gambar dengan crop */}
           <div>
-            <ImageUpload onChange={(base64) => setForm((f) => ({ ...f, image: base64 }))} />
+            {konserId ? (
+              <ImageCropUploader
+                konserId={konserId}
+                onSuccess={handleAfterUpload}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Simpan data konser dulu ya, baru bisa upload gambar 📷
+              </p>
+            )}
+
+            {form.image && (
+              <div className="aspect-[3/2] w-full mt-4 rounded overflow-hidden">
+                <img
+                  src={form.image}
+                  alt="preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
           </div>
 
           {/* Kolom kanan: Form Input */}
@@ -70,7 +108,9 @@ export default function TambahKonserPage() {
                   type={field === "tanggal" ? "date" : "text"}
                   required={field !== "venue"}
                   value={form[field as keyof typeof form] as string}
-                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, [field]: e.target.value })
+                  }
                 />
               </div>
             ))}
@@ -92,7 +132,10 @@ export default function TambahKonserPage() {
               </div>
             </div>
 
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 mt-4">
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 mt-4"
+            >
               Simpan Konser
             </Button>
           </div>

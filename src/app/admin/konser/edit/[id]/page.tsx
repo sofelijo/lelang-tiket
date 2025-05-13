@@ -1,4 +1,3 @@
-// src/app/admin/konser/[id]/edit/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import ImageUpload from "@/app/components/admin/ImageUpload";
+import ImageCropUploader from "@/app/components/admin/ImageCropUploader"; // ✅ ganti uploader
 
 export default function EditKonserPage() {
   const params = useParams();
@@ -48,12 +47,18 @@ export default function EditKonserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     await fetch(`/api/admin/konser/${konserId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+
     router.push("/admin/konser");
+  };
+
+  const handleAfterUpload = (filename: string) => {
+    setForm((prev) => ({ ...prev, image: filename }));
   };
 
   const toggleKategori = (kategoriId: number) => {
@@ -71,15 +76,24 @@ export default function EditKonserPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Kolom kiri: Upload Gambar */}
+          {/* Kolom kiri: Upload Gambar dengan cropping */}
           <div>
-            <ImageUpload
-              onChange={(base64) => setForm((prev) => ({ ...prev, image: base64 }))}
-              initialImage={form.image}
-            />
+            {konserId && (
+              <ImageCropUploader konserId={konserId} onSuccess={handleAfterUpload} />
+            )}
+          {form.image && (
+  <div className="aspect-[3/2] w-full mt-4 rounded overflow-hidden">
+    <img
+      src={form.image}
+      alt="preview"
+      className="w-full h-full object-cover"
+    />
+  </div>
+)}
+
           </div>
 
-          {/* Kolom kanan: Form */}
+          {/* Kolom kanan: Form Input */}
           <div className="space-y-4">
             <div>
               <Label>Nama</Label>

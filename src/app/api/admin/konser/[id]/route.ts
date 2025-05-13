@@ -6,6 +6,7 @@ interface Params {
   params: { id: string };
 }
 
+// GET Konser by ID
 export async function GET(_: NextRequest, { params }: Params) {
   const konser = await prisma.konser.findUnique({
     where: { id: parseInt(params.id) },
@@ -18,31 +19,27 @@ export async function GET(_: NextRequest, { params }: Params) {
 
   return NextResponse.json(konser);
 }
-  
-// app/api/admin/konser/[id]/route.ts
 
-
+// PUT Update Konser
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const id = parseInt(params.id);
     const { nama, lokasi, tanggal, venue, kategoriIds, image } = await req.json();
 
-    // 1. Update data konser (termasuk gambar)
     const konser = await prisma.konser.update({
       where: { id },
       data: {
         nama,
         lokasi,
         tanggal: new Date(tanggal),
-        venue,
-        image, // ✅ tambahkan image di sini
+        venue: venue || null,
+        image: image || undefined, // ✅ hanya update kalau dikirim
         konserKategori: {
-          deleteMany: {}, // hapus semua kategori lama
+          deleteMany: {},
         },
       },
     });
 
-    // 2. Tambahkan ulang relasi kategori
     if (Array.isArray(kategoriIds)) {
       await prisma.konserKategori.createMany({
         data: kategoriIds.map((kategoriId: number) => ({
@@ -59,3 +56,5 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
+
+
