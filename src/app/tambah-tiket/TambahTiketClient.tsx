@@ -57,6 +57,8 @@ export default function TambahTiketPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [konserList, setKonserList] = useState<any[]>([]);
   const [selectedKonser, setSelectedKonser] = useState<any>(null);
+  const [loadingTopKonser, setLoadingTopKonser] = useState(false);
+
   const maxDate = addDays(new Date(), 7);
   type KonserTop = {
     id: number;
@@ -145,10 +147,14 @@ export default function TambahTiketPage() {
   }, [searchQuery]);
   //top konser
   useEffect(() => {
+    setLoadingTopKonser(true);
     fetch("/api/top-konser")
       .then((res) => res.json())
-      .then((data) => setTopKonser(data));
+      .then((data) => setTopKonser(data))
+      .catch((err) => console.error("Gagal fetch top konser:", err))
+      .finally(() => setLoadingTopKonser(false));
   }, []);
+  
   // 🔁 Fetch kategori saat konser dipilih
   useEffect(() => {
     if (!selectedKonser?.id) return;
@@ -293,40 +299,55 @@ export default function TambahTiketPage() {
           )}
 
           {/* Saat search kosong => tampilkan top konser */}
-          {!loading && searchQuery.trim() === "" && topKonser.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-muted-foreground font-medium">
-                🔥 Konser Terpopuler
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {topKonser.map((k) => (
-                  <TicketCard
-                    namaKonser={k.nama}
-                    tanggal={new Date(k.tanggal).toLocaleDateString("id-ID")}
-                    lokasi={k.lokasi}
-                    jumlahTiket={k.jumlahTiket}
-                    tipeTempat={k.tipeTempat}
-                    venue={k.venue}
-                    image={k.image}
-                    onClick={() => {
-                      setSelectedKonser(k);
-                      toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
-                    }}
-                    onDoubleClick={() => {
-                      setSelectedKonser(k);
-                      setStep(2);
-                      toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
-                    }}
-                    className={
-                      selectedKonser?.id === k.id
-                        ? "ring-2 ring-primary scale-[1.02]"
-                        : ""
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          {!loading && searchQuery.trim() === "" && (
+  <div className="space-y-2">
+    <p className="text-muted-foreground font-medium">
+      🔥 Konser Terpopuler
+    </p>
+
+    {loadingTopKonser ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <TicketCardSkeleton key={i} />
+        ))}
+      </div>
+    ) : topKonser.length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {topKonser.map((k) => (
+          <TicketCard
+            key={k.id}
+            namaKonser={k.nama}
+            tanggal={new Date(k.tanggal).toLocaleDateString("id-ID")}
+            lokasi={k.lokasi}
+            jumlahTiket={k.jumlahTiket}
+            tipeTempat={k.tipeTempat}
+            venue={k.venue}
+            image={k.image}
+            onClick={() => {
+              setSelectedKonser(k);
+              toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+            }}
+            onDoubleClick={() => {
+              setSelectedKonser(k);
+              setStep(2);
+              toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
+            }}
+            className={
+              selectedKonser?.id === k.id
+                ? "ring-2 ring-primary scale-[1.02]"
+                : ""
+            }
+          />
+        ))}
+      </div>
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        Belum ada konser terpopuler 🫠
+      </p>
+    )}
+  </div>
+)}
+
 
           {/* Hasil pencarian */}
           {!loading && searchQuery.trim() !== "" && konserList.length > 0 && (

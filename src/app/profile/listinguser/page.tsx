@@ -2,25 +2,28 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ProfileSidebar } from "@/app/components/profile/ProfileSidebar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const STATUS_TABS = [
-  { label: "📦 Pending", value: "PENDING" },
   { label: "🚀 Berlangsung", value: "BERLANGSUNG" },
   { label: "✅ Selesai", value: "SELESAI" },
   { label: "📌 Booked", value: "BOOKED" },
+  { label: "📦 Pending", value: "PENDING" },
 ];
 
 export default function ListingUserPage() {
-  const { data: session, status } = useSession();
-  const [tab, setTab] = useState("PENDING");
+  const { data: session } = useSession();
+  const [tab, setTab] = useState("BERLANGSUNG");
   const [isVerified, setIsVerified] = useState(false);
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (session?.user?.isVerified) {
@@ -92,15 +95,36 @@ export default function ListingUserPage() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground italic">
-                  {ticket.statusLelang === "BERLANGSUNG"
-                    ? "Lelang sedang berlangsung"
-                    : ticket.statusLelang === "BOOKED"
-                    ? "Tiket sudah dibooking, menunggu pembayaran"
-                    : ticket.statusLelang === "SELESAI"
-                    ? "Tiket sudah laku"
-                    : "Menunggu mulai lelang"}
-                </p>
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <Badge variant="default">{ticket.statusLelang}</Badge>
+                  <Badge variant="secondary">🎟️ {ticket.jumlah} Tiket</Badge>
+                  <Badge variant="secondary">
+                    {ticket.sebelahan ? "🪑 Duduk Sebelahan" : "🚶‍♂️ Bebas"}
+                  </Badge>
+                  <Badge variant="outline">
+                    {ticket.kelipatan ? "Lelang" : "Jual Langsung"}
+                  </Badge>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-2">
+                  {ticket.statusLelang === "BERLANGSUNG" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/ticket/${ticket.id}/edit`)}
+                    >
+                      ✏️ Edit
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/ticket/${ticket.id}`)}
+                  >
+                    👁️ Lihat
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>

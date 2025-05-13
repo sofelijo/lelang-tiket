@@ -12,6 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ticket: {
         include: {
           konser: true,
+          kategori: true, // ✅ penting!
           user: {
             select: {
               id: true,

@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { Stepper } from "@/components/payment/Stepper";
 import Script from "next/script";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 export default function PembayaranPage() {
   const { pembayaranId } = useParams() as { pembayaranId: string };
@@ -17,6 +19,8 @@ export default function PembayaranPage() {
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [countdown, setCountdown] = useState("");
+  const [isBlinking, setIsBlinking] = useState(false);
 
   const formatRupiah = (n: number | string | null | undefined) =>
     new Intl.NumberFormat("id-ID", {
@@ -65,12 +69,46 @@ export default function PembayaranPage() {
   }, [pembayaranId]);
 
   useEffect(() => {
-    if (pembayaran?.statusPembayaran === "BERHASIL") {
+    const params = new URLSearchParams(window.location.search);
+    const skipRedirect = params.get("skipAutoRedirect");
+
+    if (
+      pembayaran?.statusPembayaran === "BERHASIL" &&
+      skipRedirect !== "true"
+    ) {
       setTimeout(() => {
         router.push(`/pembayaran/${pembayaranId}/konfirmasi`);
       }, 2000);
     }
   }, [pembayaran?.statusPembayaran, pembayaranId, router]);
+
+  useEffect(() => {
+    if (!pembayaran?.qrisExpiredAt) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const expireTime = new Date(pembayaran.qrisExpiredAt).getTime();
+      const diff = expireTime - now;
+
+      if (diff <= 0) {
+        setCountdown("00:00");
+        setIsBlinking(false);
+        clearInterval(interval);
+      } else {
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        setCountdown(
+          `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+            2,
+            "0"
+          )}`
+        );
+        setIsBlinking(minutes < 10);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [pembayaran?.qrisExpiredAt]);
 
   useEffect(() => {
     if (
@@ -135,9 +173,22 @@ export default function PembayaranPage() {
             <span>🔢 Kode Unik:</span>
             <span>{pembayaran.kodeUnik}</span>
           </div>
-          <div className="flex justify-between font-bold">
+          <div className="flex justify-between font-bold">  
             <span>💰 Total Bayar:</span>
             <span>{formatRupiah(pembayaran.jumlahTotal)}</span>
+          </div>
+          <div className="text-center mt-4">
+            <p className="text-sm text-muted-foreground mb-1">
+              ⏳ Waktu pembayaran tersisa
+            </p>
+            <div
+              className={cn(
+                "text-3xl font-bold tracking-widest text-red-600",
+                isBlinking && "animate-blink-fast"
+              )}
+            >
+              {countdown}
+            </div>
           </div>
         </div>
 

@@ -131,7 +131,7 @@ model Pembayaran {
   updatedAt                DateTime         @updatedAt
   buktiPembayaran          String?
   snapToken String? // menyimpan token Snap Midtrans
-
+sudahDipakai     Boolean          @default(false) // ✅ ini kunci validasi final
     currentStep      Int      @default(1)
   qrisExpiredAt            DateTime?
   buyer                    User             @relation(fields: [buyerId], references: [id])
@@ -238,5 +238,11 @@ model Aktivitas {
   user      User     @relation(fields: [userId], references: [id])
   aksi      String   // contoh: "UPDATE_TIKET", "DELETE_TIKET"
   detail    String   // contoh: "Update batas waktu tiket konser Dewa 19"
+  createdAt DateTime @default(now())
+}
+
+model WebhookLog {
+  id        Int      @id @default(autoincrement())
+  payload   Json
   createdAt DateTime @default(now())
 }

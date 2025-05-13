@@ -6,6 +6,7 @@ import { Stepper } from "@/components/payment/Stepper";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge"; // pastikan ini sudah ada
 
 export default function KonfirmasiPage() {
   const { pembayaranId } = useParams() as { pembayaranId: string };
@@ -83,13 +84,64 @@ export default function KonfirmasiPage() {
 
         <div className="text-sm space-y-2">
           <p className="text-muted-foreground">
-            Pembayaran kamu udah sukses 🎉 Sekarang tinggal konfirmasi ke penjual biar tiket kamu segera diproses~
+            Pembayaran kamu udah sukses 🎉 Sekarang tinggal konfirmasi ke
+            penjual biar tiket kamu segera diproses~
           </p>
 
-          <div>
-            <span className="font-medium">🎫 Konser:</span>{" "}
-            {pembayaran.ticket.konser.nama}
+          {/* Nama Konser + tombol detail tiket */}
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="font-medium">🎫 Konser:</span>{" "}
+              {pembayaran.ticket.konser.nama}
+            </div>
+            <Link
+              href={`/ticket/${pembayaran.ticket.id}`}
+              target="_blank"
+              className="text-xs underline text-blue-600 hover:text-blue-800"
+            >
+              🔍 Lihat Tiket
+            </Link>
           </div>
+
+          {/* Badge style Gen Z */}
+          <div className="flex flex-wrap gap-2 mt-1">
+            {/* Tipe tempat */}
+            {pembayaran.ticket.tipeTempat === "duduk" && (
+              <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                🪑 Duduk
+              </span>
+            )}
+            {pembayaran.ticket.tipeTempat === "berdiri" && (
+              <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                🕺 Berdiri
+              </span>
+            )}
+
+            {/* Nomor seat */}
+            {pembayaran.ticket.seat && (
+              <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                💺 Seat: {pembayaran.ticket.seat}
+              </span>
+            )}
+
+            {/* Jumlah tiket */}
+            <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+              🎟️ {pembayaran.ticket.jumlah} Tiket
+            </span>
+
+            {/* Kategori */}
+            <span className="px-2 py-1 text-xs rounded-full bg-pink-100 text-pink-800">
+              🎫 {pembayaran.ticket.kategori.nama}
+            </span> 
+
+            {/* Sebelahan */}
+            {pembayaran.ticket.sebelahan && (
+              <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                👯‍♂️ Sebelahan
+              </span>
+            )}
+          </div>
+
           <div>
             <span className="font-medium">🧍 Pembeli:</span>{" "}
             {pembayaran.buyer.name} ({waPembeli || "no WA"})
@@ -120,7 +172,7 @@ export default function KonfirmasiPage() {
         </div>
 
         <Link
-          href={`/pembayaran/${pembayaranId}`}
+          href={`/pembayaran/${pembayaranId}?skipAutoRedirect=true`}
           className="text-xs text-center block underline mt-4 text-muted-foreground hover:text-primary"
         >
           ← Balik ke detail pembayaran
@@ -134,9 +186,8 @@ export default function KonfirmasiPage() {
         className="fixed bottom-6 right-6 z-50"
       >
         <button className="bg-black text-white px-3 py-2 text-sm rounded-full shadow-lg hover:bg-gray-900 transition">
-  ❓ Butuh Bantuan Admin
-</button>
-
+          ❓ Butuh Bantuan Admin
+        </button>
       </a>
     </div>
   );

@@ -26,6 +26,7 @@ export async function GET(
             seat: true,
             tipeTempat: true,
             sebelahan: true,
+            createdAt: true,
             konser: {
               select: {
                 nama: true,
@@ -37,7 +38,12 @@ export async function GET(
             kategori: {
               select: { nama: true },
             },
-            createdAt: true,
+            pembayaran: {
+              select: {
+                statusPembayaran: true,
+                sudahDipakai: true,
+              },
+            },
           },
         },
       },
@@ -50,12 +56,16 @@ export async function GET(
       );
     }
 
-    // Filter tiket yang selesai
-    const tiketSelesai = user.tickets.filter(
-      (t) => t.statusLelang === "SELESAI"
+    // Filter hanya tiket SELESAI dan ada pembayaran BERHASIL
+    const tiketSelesai = user.tickets.filter((t) =>
+    t.statusLelang === "SELESAI" &&
+    t.pembayaran.some((p) =>
+      p.statusPembayaran === "BERHASIL" && p.sudahDipakai === true
+    )
+    
     );
 
-    // Hitung total tiket (jumlah akumulatif)
+    // Hitung total jumlah tiket yang benar-benar terjual
     const totalJumlahTiketSelesai = tiketSelesai.reduce(
       (acc, curr) => acc + curr.jumlah,
       0

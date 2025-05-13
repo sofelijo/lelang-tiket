@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
   const pembayaran = await prisma.pembayaran.findUnique({
     where: { id: Number(pembayaranId) },
     include: {
+      buyer: {
+        select: {
+          name: true,
+          email: true,
+          phoneNumber: true,
+        },
+      },
       ticket: {
         include: {
           konser: true,
@@ -102,9 +109,11 @@ export async function POST(req: NextRequest) {
       },
     ],
     customer_details: {
-      first_name: ticket.user?.name || "User",
-      email: ticket.user?.email || "user@example.com",
+      first_name: pembayaran.buyer?.name || "User",
+      email: pembayaran.buyer?.email || "user@example.com",
+      phone: pembayaran.buyer?.phoneNumber || "081234567890",
     },
+    
     expiry: {
       start_time: `${startTime} +0700`,
       unit: "minute",

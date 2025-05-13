@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     const buyerId = Number(session.user.id);
     const metode = (metodePembayaran || "bank_transfer").toLowerCase();
 
+    // 🔁 Cek pembayaran pending yang masih berlaku
     const existing = await prisma.pembayaran.findFirst({
       where: {
         ticketId,
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ id: existing.id });
     }
 
+    // 📦 Ambil info tiket + relasi
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -48,21 +50,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Tiket tidak ditemukan" }, { status: 404 });
     }
 
-    // 🎯 Penentuan harga tiket
+    // 🎯 Tentukan harga tiket
     const lastBid = ticket.bids.sort((a, b) => b.amount - a.amount)[0];
     let hargaTiket = 0;
 
     if (ticket.kelipatan === null) {
-      // Jual langsung
       hargaTiket = ticket.harga_beli ?? 0;
     } else if (ticket.statusLelang === "SELESAI") {
       hargaTiket = lastBid?.amount ?? ticket.harga_awal ?? 0;
     } else {
-      // Lelang belum selesai
       hargaTiket = lastBid?.amount ?? ticket.harga_beli ?? 0;
     }
-    
 
+    // 💸 Hitung fee & total bayar
     const kodeUnik = Math.floor(100 + Math.random() * 900);
     const feeConfig = FEE_METODE[metode] || { persen: 0, tetap: 10000 };
     const rawPlatform = Math.ceil(hargaTiket * 0.03);
@@ -71,8 +71,11 @@ export async function POST(req: Request) {
     const feeMetodeFlat = feeConfig.tetap;
     const jumlahTotal = hargaTiket + feePlatform + feeMetode + feeMetodeFlat + kodeUnik;
 
-    const order_id = `lelang-${ticket.konser.id}-${Date.now()}`;
+    // 🆔 Generate order_id dinamis
+    const prefix = ticket.kelipatan === null ? "JL" : "LL";
+    const order_id = `${prefix}-${ticket.konser.id}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // 🧾 Simpan pembayaran
     const pembayaran = await prisma.pembayaran.create({
       data: {
         ticketId,

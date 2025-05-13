@@ -10,9 +10,12 @@ export default function SnapStatusPage() {
   const router = useRouter();
 
   const [status, setStatus] = useState<"loading" | "success" | "pending" | "failed">("loading");
+  const [pembayaranId, setPembayaranId] = useState<string | null>(null);
 
   useEffect(() => {
     const statusMidtrans = params.get("transaction_status");
+    const id = params.get("order_id")?.split("-")[2] || null; // Ambil ID dari format: JL-xxx-<id>-...
+    setPembayaranId(id);
 
     if (!statusMidtrans) {
       setStatus("failed");
@@ -27,6 +30,10 @@ export default function SnapStatusPage() {
       setStatus("failed");
     }
   }, [params]);
+
+  const linkKembali = pembayaranId
+    ? `/pembayaran/${pembayaranId}`
+    : "/profile/pesanan";
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -46,12 +53,20 @@ export default function SnapStatusPage() {
             <p className="text-muted-foreground">
               Makasih yaa! Pembayaran kamu udah sukses. Admin akan proses tiket kamu segera 💃
             </p>
-            <Link
-              href="/"
-              className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              Balik ke Beranda
-            </Link>
+            <div className="flex flex-col gap-2">
+              <Link
+                href={linkKembali}
+                className="inline-block bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800"
+              >
+                🔙 Kembali ke Halaman Pembayaran
+              </Link>
+              <Link
+                href="/"
+                className="inline-block text-sm text-muted-foreground underline"
+              >
+                Balik ke Beranda
+              </Link>
+            </div>
           </>
         )}
 
@@ -61,12 +76,20 @@ export default function SnapStatusPage() {
             <p className="text-muted-foreground">
               Transaksi kamu masih nunggu, jangan lupa segera bayar yaa biar gak expired 😬
             </p>
-            <Link
-              href="/"
-              className="inline-block bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
-            >
-              Balik ke Beranda
-            </Link>
+            <div className="flex flex-col gap-2">
+              <Link
+                href={linkKembali}
+                className="inline-block bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700"
+              >
+                🔙 Cek Halaman Pembayaran
+              </Link>
+              <Link
+                href="/"
+                className="inline-block text-sm text-muted-foreground underline"
+              >
+                Balik ke Beranda
+              </Link>
+            </div>
           </>
         )}
 
@@ -76,12 +99,20 @@ export default function SnapStatusPage() {
             <p className="text-muted-foreground">
               Waduh... kayaknya transaksi kamu gagal. Coba lagi ya atau hubungi admin!
             </p>
-            <Link
-              href="/"
-              className="inline-block bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-            >
-              Coba Lagi
-            </Link>
+            <div className="flex flex-col gap-2">
+              <Link
+                href={linkKembali}
+                className="inline-block bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                🔁 Coba Lagi
+              </Link>
+              <Link
+                href="/"
+                className="inline-block text-sm text-muted-foreground underline"
+              >
+                Balik ke Beranda
+              </Link>
+            </div>
           </>
         )}
       </div>
