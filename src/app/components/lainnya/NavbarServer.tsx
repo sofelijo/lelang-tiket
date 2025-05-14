@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import LogoutButton from "./LogoutButton";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,9 @@ import { Card } from "@/components/ui/card";
 import { ProfileSidebarItems } from "@/app/components/profile/ProfileSidebar";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 import {
   Popover,
@@ -46,6 +49,9 @@ function NavbarClient() {
   const [notif, setNotif] = useState<Notifikasi[]>([]);
 
   const { data: session, status } = useSession();
+  const [isPending, startTransition] = useTransition();
+  const [loadingHref, setLoadingHref] = useState<string | null>(null);
+
 
   const refreshNotif = async () => {
     try {
@@ -178,9 +184,25 @@ function NavbarClient() {
 
         {/* Menu */}
         <div className="flex items-center gap-4 text-sm font-medium">
-          <Link href="/tambah-tiket" className="hover:text-blue-400 transition">
-            Listing Tiket
-          </Link>
+          <button
+            onClick={() =>
+              startTransition(() => {
+                router.push("/tambah-tiket");
+              })
+            }
+            disabled={isPending}
+            className="hover:text-blue-400 transition text-sm flex items-center gap-2 disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>Listing Tiket</>
+            )}
+          </button>
+
 
           {session?.user && (
             <>
@@ -248,21 +270,37 @@ function NavbarClient() {
                 </PopoverTrigger>
 
                 <PopoverContent className="w-56 p-2 space-y-1" align="end">
-                  {ProfileSidebarItems(session.user).map((item) => (
-                    <button
-                      key={item.href}
-                      onClick={() => {
-                        router.push(item.href);
-                        document.body.click();
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted transition"
-                    >
-                      {item.icon} {item.label}
-                    </button>
-                  ))}
+                  {ProfileSidebarItems(session.user).map((item) => {
+                    const isLoading = isPending && loadingHref === item.href;
+
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => {
+                          setLoadingHref(item.href);
+                          startTransition(() => {
+                            router.push(item.href);
+                            document.body.click(); // tetap tutup popover
+                          });
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-sm rounded-md transition flex items-center justify-between",
+                          "hover:bg-muted"
+                        )}
+                      >
+                        <span className="flex items-center gap-1">
+                          {item.icon} {item.label}
+                        </span>
+                        {isLoading && (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        )}
+                      </button>
+                    );
+                  })}
                   <hr className="my-1 border-muted" />
                   <LogoutButton />
                 </PopoverContent>
+
               </Popover>
             </>
           )}

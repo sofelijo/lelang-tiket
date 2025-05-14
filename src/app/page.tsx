@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Banner from "@/app/components/lainnya/Banner";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
@@ -8,6 +8,8 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import HeroSection from "@/app/components/lainnya/HeroSection";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // 🔢 Komponen animasi harga
 function AnimatedPrice({ amount }: { amount: number }) {
@@ -84,6 +86,16 @@ export default function Home() {
   const [topTickets, setTopTickets] = useState<TopTicket[]>([]);
   const [loadingTopTickets, setLoadingTopTickets] = useState(true);
   const [countdowns, setCountdowns] = useState<Record<number, string>>({});
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleCardClick = (id: number) => {
+    setLoadingId(id);
+    startTransition(() => {
+      router.push(`/konser/${id}`);
+    });
+  };
 
   useEffect(() => {
     fetch("/api/ticket")
@@ -184,13 +196,17 @@ export default function Home() {
         >
           {loadingTop
             ? Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-60 rounded-xl animate-pulse bg-zinc-200 dark:bg-zinc-800"
-                />
-              ))
+              <Skeleton
+                key={i}
+                className="h-60 rounded-xl animate-pulse bg-zinc-200 dark:bg-zinc-800"
+              />
+            ))
             : topKonser.slice(0, 8).map((k) => (
-                <motion.div key={k.id} variants={itemVariant}>
+              <motion.div key={k.id} variants={itemVariant}>
+                <div className="relative" onClick={() => {
+                  setLoadingId(k.id);
+                  startTransition(() => { }); // trigger UX loading
+                }}>
                   <Link href={`/konser/${k.id}`}>
                     <Card className="group overflow-hidden rounded-xl border border-gray-700 bg-gray-800/80 backdrop-blur-sm shadow-xl transition-all hover:scale-[1.02] duration-300">
                       <div className="w-full h-56 relative">
@@ -226,8 +242,16 @@ export default function Home() {
                       </div>
                     </Card>
                   </Link>
-                </motion.div>
-              ))}
+
+                  {/* Loading Overlay */}
+                  {isPending && loadingId === k.id && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-xl z-50">
+                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
         </motion.div>
       </section>
 
@@ -245,72 +269,72 @@ export default function Home() {
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
           {loadingTopTickets
             ? Array.from({ length: 16 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 rounded-lg" />
-              ))
+              <Skeleton key={i} className="h-40 rounded-lg" />
+            ))
             : topTickets.slice(0, 16).map((ticket) => (
-                <Link href={`/ticket/${ticket.id}`} key={ticket.id}>
-                 <motion.div
-  initial={{ opacity: 0, scale: 0.95 }}
-  animate={{ opacity: 1, scale: 1 }}
-  transition={{ duration: 0.5, ease: "easeOut" }}
->
-  <Card className="group overflow-hidden rounded-xl border border-gray-700 bg-gray-800/80 backdrop-blur-sm shadow-xl hover:scale-[1.02] transition-transform duration-500">
-    <div className="w-full h-28 relative">
-      {/* Gambar */}
-      <motion.div
-        className="absolute inset-0"
-        initial={{ scale: 1 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Image
-          src={ticket.konser.image || "/placeholder.jpg"}
-          alt={ticket.konser.nama}
-          fill
-          className="object-cover"
-        />
-      </motion.div>
+              <Link href={`/ticket/${ticket.id}`} key={ticket.id}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  <Card className="group overflow-hidden rounded-xl border border-gray-700 bg-gray-800/80 backdrop-blur-sm shadow-xl hover:scale-[1.02] transition-transform duration-500">
+                    <div className="w-full h-28 relative">
+                      {/* Gambar */}
+                      <motion.div
+                        className="absolute inset-0"
+                        initial={{ scale: 1 }}
+                        animate={{ scale: 1 }}
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <Image
+                          src={ticket.konser.image || "/placeholder.jpg"}
+                          alt={ticket.konser.nama}
+                          fill
+                          className="object-cover"
+                        />
+                      </motion.div>
 
-      {/* Countdown & Bid */}
-      <motion.div
-        className="absolute top-0 w-full flex justify-between items-center bg-gradient-to-b from-black/70 via-black/30 to-transparent text-white text-[10px] px-2 py-1 z-30"
-        initial={{ opacity: 0, y: -5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
-        <span>⏰ {countdowns[ticket.id] || "00:00:00:00"}</span>
-        <span>🔥 {ticket.jumlahBid} bid</span>
-      </motion.div>
+                      {/* Countdown & Bid */}
+                      <motion.div
+                        className="absolute top-0 w-full flex justify-between items-center bg-gradient-to-b from-black/70 via-black/30 to-transparent text-white text-[10px] px-2 py-1 z-30"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.4 }}
+                      >
+                        <span>⏰ {countdowns[ticket.id] || "00:00:00:00"}</span>
+                        <span>🔥 {ticket.jumlahBid} bid</span>
+                      </motion.div>
 
-      {/* Badge kategori & harga */}
-      <div
-        className="absolute bottom-2 left-2 flex flex-col items-start gap-1 z-20 transition-all duration-500 group-hover:translate-y-3 group-hover:opacity-0"
-      >
-        <div className="bg-indigo-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow">
-          {ticket.kategori.nama}
-        </div>
-        <div className="bg-emerald-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow">
-          <AnimatedPrice
-            amount={Math.floor(
-              ticket.harga_terkini / (ticket.jumlah * 1.03 || 1)
-            )}
-          />
-        </div>
-      </div>
+                      {/* Badge kategori & harga */}
+                      <div
+                        className="absolute bottom-2 left-2 flex flex-col items-start gap-1 z-20 transition-all duration-500 group-hover:translate-y-3 group-hover:opacity-0"
+                      >
+                        <div className="bg-indigo-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow">
+                          {ticket.kategori.nama}
+                        </div>
+                        <div className="bg-emerald-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow">
+                          <AnimatedPrice
+                            amount={Math.floor(
+                              ticket.harga_terkini / (ticket.jumlah * 1.03 || 1)
+                            )}
+                          />
+                        </div>
+                      </div>
 
-      {/* Nama konser - fade + slide in saat hover */}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-10">
-        <h3 className="text-white text-xs sm:text-sm font-semibold text-center px-4 py-1 line-clamp-2">
-          {ticket.konser.nama}
-        </h3>
-      </div>
-    </div>
-  </Card>
-</motion.div>
+                      {/* Nama konser - fade + slide in saat hover */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-10">
+                        <h3 className="text-white text-xs sm:text-sm font-semibold text-center px-4 py-1 line-clamp-2">
+                          {ticket.konser.nama}
+                        </h3>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
 
-                </Link>
-              ))}
+              </Link>
+            ))}
         </div>
       </section>
     </main>

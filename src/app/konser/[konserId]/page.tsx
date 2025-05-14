@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function formatCountdown(jam: number): string {
   const totalSeconds = Math.floor(jam * 3600);
@@ -43,6 +51,9 @@ export default function TiketByKonserPage() {
   const [jumlahAktif, setJumlahAktif] = useState<string | null>(null);
   const [filterSebelahan, setFilterSebelahan] = useState<null | boolean>(null);
   const [sortBy, setSortBy] = useState<string>("terpopuler");
+  const [isPending, startTransition] = useTransition();
+
+
 
   const [loading, setLoading] = useState(false);
 
@@ -204,16 +215,24 @@ export default function TiketByKonserPage() {
           </div>
         </Card>
         <Button
-          onClick={() =>
-            router.push(`/tambah-tiket?step=2&konserId=${konser.id}`)
-          }
+          onClick={() => {
+            startTransition(() => {
+              router.push(`/tambah-tiket?step=2&konserId=${konser.id}`);
+            });
+          }}
+          disabled={isPending}
           className="w-full bg-green-600 text-white hover:bg-green-700"
         >
-          ➕ Tambah Tiket untuk Konser Ini
+          {isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>➕ Tambah Tiket untuk Konser Ini</>
+          )}
         </Button>
+
       </aside>
 
-      <section className="lg:w-2/3 space-y-4">
+      <section className="lg:w-4/5 space-y-4">
         <div className="flex gap-2">
           {(["LELANG", "JUAL_LANGSUNG"] as const).map((type) => (
             <button
@@ -231,25 +250,32 @@ export default function TiketByKonserPage() {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <select
-            className="px-3 py-2 border rounded-md bg-background text-sm"
-            value={kategoriAktif ?? ""}
-            onChange={(e) => setKategoriAktif(e.target.value || null)}
+        <div className="flex flex-nowrap gap-2 overflow-x-auto items-center pb-2">
+          {/* Select Kategori */}
+          <Select
+            value={kategoriAktif ?? "semua"}
+            onValueChange={(val) => setKategoriAktif(val === "semua" ? null : val)}
           >
-            <option value="">🎟️ Semua Kategori</option>
-            {kategoriList.map((kat: string) => (
-              <option key={kat} value={kat}>
-                {kat}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="min-w-[140px] h-9 bg-black text-white text-sm border border-white/20 rounded-md px-3">
+              <SelectValue placeholder="🟧 Kategori" />
+            </SelectTrigger>
+            <SelectContent className="bg-muted text-black">
+              <SelectItem value="semua">🟧 Kategori</SelectItem>
+              {kategoriList.map((kat: string) => (
+                <SelectItem key={kat} value={kat}>
+                  {kat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Select Jumlah */}
           <select
-            className="px-3 py-2 border rounded-md bg-background text-sm"
+            className="min-w-[140px] h-9 text-sm bg-black text-white border border-white/20 rounded-md px-3"
             value={jumlahAktif ?? ""}
             onChange={(e) => setJumlahAktif(e.target.value || null)}
           >
-            <option value="">🎫 Semua Jumlah</option>
+            <option value="">🟦 Jumlah</option>
             {[1, 2, 3, 4, 5].map((jml) => (
               <option key={jml} value={jml}>
                 {jml} Tiket
@@ -257,7 +283,7 @@ export default function TiketByKonserPage() {
             ))}
           </select>
 
-          <Separator orientation="vertical" className="h-5" />
+          {/* Filter Sebelahan */}
           {[true, false].map((val) => (
             <Badge
               key={String(val)}
@@ -265,25 +291,24 @@ export default function TiketByKonserPage() {
                 setFilterSebelahan(filterSebelahan === val ? null : val)
               }
               className={cn(
-                "cursor-pointer",
+                "h-9 px-3 min-w-[120px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
                 filterSebelahan === val
-                  ? "border border-white text-white"
-                  : "border border-muted-foreground/20 text-muted-foreground"
+                  ? "border border-white bg-white/10 text-white"
+                  : "border border-white/10 text-muted-foreground bg-transparent"
               )}
             >
-              {val ? "✅ Sebelahan" : "🚫 Tidak Sebelahan"}
+              {val ? "✅ Sebelahan" : "🚫 Tidak"}
             </Badge>
           ))}
 
-          <Separator orientation="vertical" className="h-5" />
-
+          {/* Sort by */}
           <Badge
             onClick={() => setSortBy("terpopuler")}
             className={cn(
-              "cursor-pointer",
+              "h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
               sortBy === "terpopuler"
-                ? "border border-white text-white"
-                : "border border-muted-foreground/20 text-muted-foreground"
+                ? "border border-white bg-white/10 text-white"
+                : "border border-white/10 text-muted-foreground bg-transparent"
             )}
           >
             🔥 Terpopuler
@@ -292,15 +317,17 @@ export default function TiketByKonserPage() {
           <Badge
             onClick={() => setSortBy("terbaru")}
             className={cn(
-              "cursor-pointer",
+              "h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
               sortBy === "terbaru"
-                ? "border border-white text-white"
-                : "border border-muted-foreground/20 text-muted-foreground"
+                ? "border border-white bg-white/10 text-white"
+                : "border border-white/10 text-muted-foreground bg-transparent"
             )}
           >
             🆕 Terbaru
           </Badge>
         </div>
+
+
 
         <Card className="p-4 flex items-center justify-between gap-4 bg-gray-100 border-b text-xs uppercase font-semibold text-black tracking-wide">
           <div className="flex items-center gap-6 flex-wrap w-full">
@@ -387,7 +414,7 @@ export default function TiketByKonserPage() {
                 const hargaSatuan = tiket.hargaSatuan;
                 const jamSisa = tiket.batas_waktu
                   ? (new Date(tiket.batas_waktu).getTime() - Date.now()) /
-                    (1000 * 60 * 60)
+                  (1000 * 60 * 60)
                   : null;
                 const waktu = jamSisa !== null ? formatCountdown(jamSisa) : "-";
                 const waktuClass =
@@ -395,12 +422,12 @@ export default function TiketByKonserPage() {
                     ? jamSisa <= 1
                       ? "text-red-500 animate-blink-fast"
                       : jamSisa <= 3
-                      ? "text-red-500 animate-blink-slow"
-                      : jamSisa <= 6
-                      ? "text-red-500"
-                      : jamSisa <= 12
-                      ? "text-yellow-500"
-                      : "text-foreground"
+                        ? "text-red-500 animate-blink-slow"
+                        : jamSisa <= 6
+                          ? "text-red-500"
+                          : jamSisa <= 12
+                            ? "text-yellow-500"
+                            : "text-foreground"
                     : "text-foreground";
 
                 return (
@@ -412,16 +439,16 @@ export default function TiketByKonserPage() {
                       <div className="w-[150px] font-bold text-base text-foreground">
                         {typeof tiket.estimasiSatuan === "number"
                           ? `Rp ${(
-                              Math.round(tiket.estimasiSatuan / 1000) * 1000
-                            ).toLocaleString()}`
+                            Math.round(tiket.estimasiSatuan / 1000) * 1000
+                          ).toLocaleString()}`
                           : "Rp -"}
                       </div>
 
                       <div className="w-[120px]">
                         {typeof tiket.estimasiTotal === "number"
                           ? `Rp ${(
-                              Math.round(tiket.estimasiTotal / 1000) * 1000
-                            ).toLocaleString()}`
+                            Math.round(tiket.estimasiTotal / 1000) * 1000
+                          ).toLocaleString()}`
                           : "Rp -"}
                       </div>
 
