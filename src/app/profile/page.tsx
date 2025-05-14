@@ -79,15 +79,21 @@ export default function ProfilePage() {
         setIsVerified(!!data.phoneVerified);
 
         if (provinsi) {
-          const kotaData = await fetch(`/api/wilayah/kota?provinsiId=${provinsi}`).then((r) => r.json());
+          const kotaData = await fetch(
+            `/api/wilayah/kota?provinsiId=${provinsi}`
+          ).then((r) => r.json());
           setKotaList(kotaData);
         }
         if (kota) {
-          const kecData = await fetch(`/api/wilayah/kecamatan?kotaId=${kota}`).then((r) => r.json());
+          const kecData = await fetch(
+            `/api/wilayah/kecamatan?kotaId=${kota}`
+          ).then((r) => r.json());
           setKecamatanList(Array.isArray(kecData) ? kecData : kecData.data);
         }
         if (kecamatan) {
-          const kelData = await fetch(`/api/wilayah/kelurahan?kecamatanId=${kecamatan}`).then((r) => r.json());
+          const kelData = await fetch(
+            `/api/wilayah/kelurahan?kecamatanId=${kecamatan}`
+          ).then((r) => r.json());
           setKelurahanList(kelData);
         }
 
@@ -165,197 +171,221 @@ export default function ProfilePage() {
       ? URL.createObjectURL(form.image)
       : form.image || "/images/default-avatar.png";
 
-  if (status === "loading" || loading) return <div className="p-4">Loading dulu yaa...</div>;
+  if (status === "loading" || loading)
+    return <div className="p-4">Loading dulu yaa...</div>;
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
   }
 
- // ... (import, session, useState, useEffect, dll tetap sama)
+  // ... (import, session, useState, useEffect, dll tetap sama)
 
- return (
-  <div className="max-w-screen-xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
-    <ProfileSidebar isVerified={isVerified} />
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+      <ProfileSidebar isVerified={isVerified} />
 
-    <div className="flex-1">
-      <Card className="bg-white shadow-xl rounded-2xl border border-border text-gray-800">
-        <CardHeader className="text-center">
-          <h1 className="text-2xl font-bold">🧑‍💼 Data Diri Kamu</h1>
-        </CardHeader>
+      <div className="flex-1">
+        <Card className="bg-white shadow-xl rounded-2xl border border-border text-gray-800">
+          <CardHeader className="text-center">
+            <h1 className="text-2xl font-bold">🧑‍💼 Data Diri Kamu</h1>
+          </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* FORM KOLOM KIRI */}
-            <form onSubmit={handleSubmit} className="flex-1 space-y-4">
-              <div>
-                <Label htmlFor="name">Nama Lengkap</Label>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* FORM KOLOM KIRI */}
+              <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+                <div>
+                  <Label htmlFor="name">Nama Lengkap</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    placeholder="Masukin nama kamu ya"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={form.email}
+                    readOnly
+                    className="cursor-not-allowed text-muted-foreground"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phoneNumber">Nomor WhatsApp</Label>
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={form.phoneNumber}
+                    readOnly
+                    className="cursor-not-allowed text-muted-foreground"
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Alamat Domisili</Label>
+
+                  <Select
+                    onValueChange={(val) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        provinsiId: val,
+                        kotaId: "",
+                        kecamatanId: "",
+                        kelurahanId: "",
+                      }))
+                    }
+                    value={form.provinsiId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Provinsi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {provinsiList.map((prov) => (
+                        <SelectItem key={prov.kode} value={prov.kode}>
+                          {prov.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    onValueChange={(val) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        kotaId: val,
+                        kecamatanId: "",
+                        kelurahanId: "",
+                      }))
+                    }
+                    value={form.kotaId}
+                    disabled={!form.provinsiId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Kota/Kabupaten" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kotaList.map((kota) => (
+                        <SelectItem key={kota.kode} value={kota.kode}>
+                          {kota.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    onValueChange={(val) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        kecamatanId: val,
+                        kelurahanId: "",
+                      }))
+                    }
+                    value={form.kecamatanId}
+                    disabled={!form.kotaId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Kecamatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kecamatanList.map((kec) => (
+                        <SelectItem key={kec.kode} value={kec.kode}>
+                          {kec.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    onValueChange={(val) =>
+                      setForm((prev) => ({ ...prev, kelurahanId: val }))
+                    }
+                    value={form.kelurahanId}
+                    disabled={!form.kecamatanId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Kelurahan/Desa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kelurahanList.map((kel) => (
+                        <SelectItem key={kel.kode} value={kel.kode}>
+                          {kel.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <CardFooter className="pt-6">
+                  <Button type="submit" className="w-full">
+                    🚀 Simpan Perubahan
+                  </Button>
+                </CardFooter>
+              </form>
+
+              {/* FOTO KOLOM KANAN */}
+              {/* FOTO KOLOM KANAN */}
+              <div className="flex flex-col items-center gap-2 w-full md:w-48">
+                <p className="text-sm text-muted-foreground mb-1">
+                  @{form.username || "username"}
+                </p>
+                
+                <img
+  src={imageUrl}
+  alt="Foto Profil"
+  className="w-24 h-24 rounded-xl object-cover ring-2 ring-primary cursor-pointer"
+  onClick={() => document.getElementById("upload-photo")?.click()}
+/>
+
                 <Input
-                  id="name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Masukin nama kamu ya"
+                  id="upload-photo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setForm((prev) => ({ ...prev, image: file }));
+                    }
+                  }}
+                  className="hidden"
                 />
+                <span className="text-xs text-muted-foreground text-center mb-2">
+                  Klik buat ganti foto kamu 📸
+                </span>
+
+                {/* Pilihan Avatar Default (kotak rounded-xl) */}
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 10 }).map((_, i) => {
+                    const src = `/images/default-avatar${i + 1}.png`;
+                    return (
+                      <img
+                        key={i}
+                        src={src}
+                        onClick={() =>
+                          setForm((prev) => ({ ...prev, image: src }))
+                        }
+                        className={`w-16 h-16 object-cover rounded-xl border-2 cursor-pointer transition-all duration-150 ${
+                          form.image === src
+                            ? "border-primary ring-2 ring-primary"
+                            : "border-gray-300"
+                        }`}
+                        alt={`Avatar ${i + 1}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  value={form.email}
-                  readOnly
-                  className="cursor-not-allowed text-muted-foreground"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="phoneNumber">Nomor WhatsApp</Label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  value={form.phoneNumber}
-                  readOnly
-                  className="cursor-not-allowed text-muted-foreground"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Alamat Domisili</Label>
-
-                <Select
-                  onValueChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      provinsiId: val,
-                      kotaId: "",
-                      kecamatanId: "",
-                      kelurahanId: "",
-                    }))
-                  }
-                  value={form.provinsiId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Provinsi" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {provinsiList.map((prov) => (
-                      <SelectItem key={prov.kode} value={prov.kode}>
-                        {prov.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  onValueChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      kotaId: val,
-                      kecamatanId: "",
-                      kelurahanId: "",
-                    }))
-                  }
-                  value={form.kotaId}
-                  disabled={!form.provinsiId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Kota/Kabupaten" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kotaList.map((kota) => (
-                      <SelectItem key={kota.kode} value={kota.kode}>
-                        {kota.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  onValueChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      kecamatanId: val,
-                      kelurahanId: "",
-                    }))
-                  }
-                  value={form.kecamatanId}
-                  disabled={!form.kotaId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Kecamatan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kecamatanList.map((kec) => (
-                      <SelectItem key={kec.kode} value={kec.kode}>
-                        {kec.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  onValueChange={(val) =>
-                    setForm((prev) => ({ ...prev, kelurahanId: val }))
-                  }
-                  value={form.kelurahanId}
-                  disabled={!form.kecamatanId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Kelurahan/Desa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kelurahanList.map((kel) => (
-                      <SelectItem key={kel.kode} value={kel.kode}>
-                        {kel.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <CardFooter className="pt-6">
-                <Button type="submit" className="w-full">
-                  🚀 Simpan Perubahan
-                </Button>
-              </CardFooter>
-            </form>
-
-            {/* FOTO KOLOM KANAN */}
-            <div className="flex flex-col items-center gap-2 w-full md:w-48">
-              <p className="text-sm text-muted-foreground mb-1">
-                @{form.username || "username"}
-              </p>
-              <img
-                src={imageUrl}
-                alt="Foto Profil"
-                className="w-24 h-24 rounded-full object-cover ring-2 ring-primary cursor-pointer"
-                onClick={() => document.getElementById("upload-photo")?.click()}
-              />
-              <Input
-                id="upload-photo"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setForm((prev) => ({ ...prev, image: file }));
-                  }
-                }}
-                className="hidden"
-              />
-              <span className="text-xs text-muted-foreground text-center">
-                Klik buat ganti foto kamu 📸
-              </span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  </div>
-);
+  );
 }
-
-

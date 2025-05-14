@@ -107,7 +107,7 @@ export default function BayarStep1Page() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Gagal membuat pembayaran");
+      if (!res.ok) throw new Error(data.message || "Gagal membuat pembayaran - Wajib login");
       router.push(`/pembayaran/${data.id}`);
     } catch (err: any) {
       alert("❌ " + err.message);

@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import LogoutButton from "./LogoutButton";
 import { Input } from "@/components/ui/input";
 import { Search, X, Bell } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProfileSidebarItems } from "@/app/components/profile/ProfileSidebar";
 import Link from "next/link";
-
-// Ganti jadi:
 import { useRouter, usePathname } from "next/navigation";
 
 import {
@@ -16,6 +15,14 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+
+type Notifikasi = {
+  id: string;
+  pesan: string;
+  link: string;
+  isRead: boolean;
+  createdAt: string;
+};
 
 export default function NavbarWrapper() {
   const pathname = usePathname();
@@ -28,24 +35,17 @@ export default function NavbarWrapper() {
   if (!shouldShow) return null;
   return <NavbarClient />;
 }
-type Notifikasi = {
-  id: string;
-  pesan: string;
-  link: string;
-  isRead: boolean;
-  createdAt: string;
-};
 
 function NavbarClient() {
   const pathname = usePathname();
   const router = useRouter();
   const [openNotif, setOpenNotif] = useState(false);
-
-  const [session, setSession] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [notif, setNotif] = useState<Notifikasi[]>([]);
+
+  const { data: session, status } = useSession();
 
   const refreshNotif = async () => {
     try {
@@ -57,25 +57,6 @@ function NavbarClient() {
     }
   };
 
-  // ✅ Ambil session user
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const res = await fetch("/api/auth/session");
-        const data = await res.json();
-        if (Object.keys(data).length > 0) {
-          console.log("👤 Session berhasil:", data);
-          setSession(data);
-        }
-      } catch (error) {
-        console.error("❌ Gagal ambil session:", error);
-      }
-    }
-
-    fetchSession();
-  }, []);
-
-  // ✅ Fetch notifikasi saat session siap
   useEffect(() => {
     if (!session?.user) return;
 
@@ -83,7 +64,6 @@ function NavbarClient() {
       try {
         const res = await fetch("/api/notifikasi");
         const data = await res.json();
-        console.log("📨 Notifikasi masuk ke state:", data); // DEBUG LOG
         setNotif(data);
       } catch (err) {
         console.error("❌ Gagal fetch notifikasi:", err);
@@ -91,17 +71,15 @@ function NavbarClient() {
     };
 
     fetchNotif();
-    const interval = setInterval(fetchNotif, 30000); // polling tiap 30 detik
+    const interval = setInterval(fetchNotif, 30000);
     return () => clearInterval(interval);
   }, [session]);
 
-  // ✅ Reset hasil pencarian saat berpindah halaman
   useEffect(() => {
     setSearch("");
     setResult([]);
   }, [pathname]);
 
-  // ✅ Pencarian konser (search bar)
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (search.length >= 3) {
@@ -245,7 +223,7 @@ function NavbarClient() {
                         <button
                           key={n.id}
                           onClick={() => {
-                            setOpenNotif(false); // ⬅️ manual close
+                            setOpenNotif(false);
                             router.push(n.link);
                           }}
                           className="text-left w-full p-2 rounded-md border hover:bg-muted transition"
@@ -275,7 +253,7 @@ function NavbarClient() {
                       key={item.href}
                       onClick={() => {
                         router.push(item.href);
-                        document.body.click(); // buat nutupin popover manual
+                        document.body.click();
                       }}
                       className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted transition"
                     >
@@ -283,21 +261,13 @@ function NavbarClient() {
                     </button>
                   ))}
                   <hr className="my-1 border-muted" />
-                  <button
-                    onClick={async () => {
-                      await fetch("/api/auth/signout", { method: "POST" });
-                      router.push("/login");
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-red-50 text-red-600 transition"
-                  >
-                    🚪 Logout
-                  </button>
+                  <LogoutButton />
                 </PopoverContent>
               </Popover>
             </>
           )}
 
-          {!session?.user && (
+          {!session?.user && status !== "loading" && (
             <Link href="/login" className="hover:text-blue-400">
               Login
             </Link>

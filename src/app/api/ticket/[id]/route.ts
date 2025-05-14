@@ -38,6 +38,10 @@ export async function GET(
             },
           },
         },
+        pemenang: {
+          select: { id: true, username: true , image: true},
+        }
+        
       },
     });
 

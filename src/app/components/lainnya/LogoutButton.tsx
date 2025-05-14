@@ -10,7 +10,7 @@ export default function LogoutButton() {
       onClick={() => signOut({ callbackUrl: '/login' })}
       className="text-red-500 hover:text-red-600 text-sm"
     >
-      Logout
+      🚪 Logout
     </Button>
   );
 }
