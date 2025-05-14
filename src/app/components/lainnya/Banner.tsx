@@ -26,7 +26,7 @@ export default function Banner() {
   const [banners, setBanners] = useState<BannerItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/banner")
+    fetch("/api/banner")
       .then((res) => res.json())
       .then((data: BannerItem[]) => {
         const now = new Date();

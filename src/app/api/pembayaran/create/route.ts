@@ -1,14 +1,10 @@
+// src/app/api/pembayaran/create/route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const FEE_METODE: Record<string, { persen: number; tetap: number }> = {
-  qris: { persen: 0.01, tetap: 2000 },
-  credit_card: { persen: 0.05, tetap: 5000 },
-  bank_transfer: { persen: 0, tetap: 10000 },
-  cstore: { persen: 0, tetap: 10000 },
-};
+import { calculateEstimasi, MetodePembayaran } from "@/lib/payment/calculateEstimasi";
 
 export async function POST(req: Request) {
   try {
@@ -19,9 +15,8 @@ export async function POST(req: Request) {
 
     const { ticketId, metodePembayaran } = await req.json();
     const buyerId = Number(session.user.id);
-    const metode = (metodePembayaran || "bank_transfer").toLowerCase();
+    const metode = (metodePembayaran || "bank_transfer").toLowerCase() as MetodePembayaran;
 
-    // 🔁 Cek pembayaran pending yang masih berlaku
     const existing = await prisma.pembayaran.findFirst({
       where: {
         ticketId,
@@ -36,7 +31,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ id: existing.id });
     }
 
-    // 📦 Ambil info tiket + relasi
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -50,42 +44,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Tiket tidak ditemukan" }, { status: 404 });
     }
 
-    // 🎯 Tentukan harga tiket
-    const lastBid = ticket.bids.sort((a, b) => b.amount - a.amount)[0];
-    let hargaTiket = 0;
+    // 🧮 Hitung estimasi TANPA kodeUnik
+    const estimasi = calculateEstimasi(ticket, metode);
 
-    if (ticket.kelipatan === null) {
-      hargaTiket = ticket.harga_beli ?? 0;
-    } else if (ticket.statusLelang === "SELESAI") {
-      hargaTiket = lastBid?.amount ?? ticket.harga_awal ?? 0;
-    } else {
-      hargaTiket = lastBid?.amount ?? ticket.harga_beli ?? 0;
-    }
+    // 🔢 Generate kode unik random
+    const kodeUnik = Math.floor(100 + Math.random() * 900); // 100–999
 
-    // 💸 Hitung fee & total bayar
-    const kodeUnik = Math.floor(100 + Math.random() * 900);
-    const feeConfig = FEE_METODE[metode] || { persen: 0, tetap: 10000 };
-    const rawPlatform = Math.ceil(hargaTiket * 0.03);
-    const feePlatform = Math.max(rawPlatform, 13000);
-    const feeMetode = Math.ceil(hargaTiket * feeConfig.persen);
-    const feeMetodeFlat = feeConfig.tetap;
-    const jumlahTotal = hargaTiket + feePlatform + feeMetode + feeMetodeFlat + kodeUnik;
+    // 💰 Hitung ulang total dengan kodeUnik yang baru
+    const jumlahTotal =
+      estimasi.hargaTiket +
+      estimasi.feePlatform +
+      estimasi.feeMetode +
+      estimasi.feeTransaksi +
+      kodeUnik;
 
-    // 🆔 Generate order_id dinamis
     const prefix = ticket.kelipatan === null ? "JL" : "LL";
     const order_id = `${prefix}-${ticket.konser.id}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 🧾 Simpan pembayaran
     const pembayaran = await prisma.pembayaran.create({
       data: {
         ticketId,
         buyerId,
-        hargaTiket,
-        feePlatform,
-        feeMetode,
-        feeMetodeFlat,
-        kodeUnik,
-        jumlahTotal,
+        hargaTiket: estimasi.hargaTiket,
+        feePlatform: estimasi.feePlatform,
+        feeMetode: estimasi.feeMetode,
+        feeMetodeFlat: estimasi.feeTransaksi,
+        kodeUnik: kodeUnik, // ✅ kode unik acak disimpan
+        jumlahTotal: jumlahTotal, // ✅ total sinkron dengan kode unik baru
         order_id,
         snapMethod: metode,
         statusPembayaran: "PENDING",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import axios from "axios";
 
 const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || "";
 
@@ -18,18 +19,20 @@ export async function POST(req: NextRequest) {
   try {
     console.log("📥 Webhook diterima");
 
-    const signatureHeader = req.headers.get("x-callback-signature");
-    const body = await req.json();
-    console.log("📦 Body JSON:", body);
+const rawBody = await req.text();
+const body = JSON.parse(rawBody);
 
-    // 1. ✅ Simpan log ke WebhookLog
-    await prisma.webhookLog.create({ data: { payload: body } });
+const signatureHeader = req.headers.get("x-callback-signature");
+console.log("🔑 Signature dari header:", signatureHeader);
 
-    // 2. 🔐 Validasi signature
-    const expectedSignature = crypto
-      .createHmac("sha512", MIDTRANS_SERVER_KEY)
-      .update(JSON.stringify(body))
-      .digest("hex");
+const expectedSignature = crypto
+  .createHmac("sha512", MIDTRANS_SERVER_KEY)
+  .update(rawBody)
+  .digest("hex");
+
+console.log("🔐 Signature yang dihitung:", expectedSignature);
+console.log("📦 Raw body:", rawBody);
+
 
     if (signatureHeader !== expectedSignature) {
       console.warn("❌ Signature tidak cocok");
@@ -43,16 +46,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing required data" }, { status: 400 });
     }
 
-    console.log("✅ Data lengkap diterima");
-    console.log("🔍 order_id:", order_id);
-    console.log("🔍 transaction_status:", transaction_status);
-    console.log("🔍 status_code:", status_code);
-    console.log("🔍 gross_amount:", gross_amount);
-
     const statusPembayaran = statusMap[transaction_status] || "PENDING";
     console.log("✅ statusPembayaran hasil mapping:", statusPembayaran);
 
-    // 3. ✅ Update pembayaran
+    // Simpan log payload ke WebhookLog (opsional tapi disarankan)
+    await prisma.webhookLog.create({ data: { payload: body } });
+
     const updated = await prisma.pembayaran.updateMany({
       where: { order_id },
       data: {
@@ -61,13 +60,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("📊 Jumlah data diperbarui:", updated.count);
     if (updated.count === 0) {
-      console.warn("⚠️ Tidak ada pembayaran ditemukan dengan order_id");
       return NextResponse.json({ message: "No pembayaran matched" }, { status: 404 });
     }
 
-    // 4. ✅ Cari pembayaran untuk tindakan lanjutan
+    // Ambil detail pembayaran
     const pembayaran = await prisma.pembayaran.findFirst({
       where: { order_id },
       include: {
@@ -80,26 +77,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Pembayaran tidak ditemukan (2nd fetch)" }, { status: 404 });
     }
 
-    // 5. 🎯 Update statusLelang jika diperlukan
-    const currentStatus = pembayaran.ticket.statusLelang;
-
-    if (statusPembayaran === "BERHASIL") {
-      if (currentStatus !== "SELESAI") {
-        await prisma.ticket.update({
-          where: { id: pembayaran.ticketId },
-          data: { statusLelang: "SELESAI" },
-        });
-      }
+    // Update status tiket
+    if (statusPembayaran === "BERHASIL" && pembayaran.ticket.statusLelang !== "SELESAI") {
+      await prisma.ticket.update({
+        where: { id: pembayaran.ticketId },
+        data: { statusLelang: "SELESAI" },
+      });
     }
 
-    if (statusPembayaran === "GAGAL" && currentStatus === "BOOKED") {
+    if (statusPembayaran === "GAGAL" && pembayaran.ticket.statusLelang === "BOOKED") {
       await prisma.ticket.update({
         where: { id: pembayaran.ticketId },
         data: { statusLelang: "BERLANGSUNG" },
       });
     }
 
-    // 6. 🔔 Notifikasi ke user
+    // Notifikasi dan aktivitas
     const pesan =
       statusPembayaran === "BERHASIL"
         ? `🎉 Pembayaran kamu berhasil untuk tiket konser ID ${pembayaran.ticket.konserId}.`
@@ -113,7 +106,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 7. 📝 Catat ke Aktivitas
     await prisma.aktivitas.create({
       data: {
         userId: pembayaran.buyerId,
@@ -122,10 +114,33 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 8. 📱 Placeholder push WA
-    // await sendWA(pembayaran.buyer.phoneNumber, pesan);
+    // 7. 📲 Kirim WhatsApp via Wablas
+try {
+  const waPayload = {
+    data: [
+      {
+        phone: pembayaran.buyer.phoneNumber, // pastikan user punya phoneNumber
+        message: pesan,
+      },
+    ],
+  };
 
-    console.log("✅ Status pembayaran berhasil diperbarui dan tindakan lanjutan selesai");
+  const waRes = await axios.post("https://bdg.wablas.com/api/v2/send-message", waPayload, {
+    headers: {
+      Authorization: process.env.WABLAS_TOKEN!, // pastikan ada token
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!waRes.data.status) {
+    console.warn("⚠️ Gagal kirim WA:", waRes.data);
+  } else {
+    console.log("✅ WA berhasil dikirim");
+  }
+} catch (waError) {
+  console.error("❌ Error kirim WA:", waError);
+}
+
     return NextResponse.json({ message: "Pembayaran updated" });
   } catch (err) {
     console.error("🔥 Webhook Error:", err);

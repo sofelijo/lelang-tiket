@@ -1,0 +1,24 @@
+{
+    "va_numbers": [
+      {
+        "va_number": "12067911256767614543807",
+        "bank": "bca"
+      }
+    ],
+    "transaction_time": "2025-05-14 16:16:03",
+    "transaction_status": "settlement",
+    "transaction_id": "3c7ff7cf-12a2-43af-b4a1-5524e576d0a7",
+    "status_message": "midtrans payment notification",
+    "status_code": "200",
+    "settlement_time": "2025-05-14 16:16:11",
+    "payment_type": "bank_transfer",
+    "payment_amounts": [],
+    "order_id": "LL-1-1747214057720-7723",
+    "merchant_id": "M120679",
+    "gross_amount": "4025758.00",
+    "fraud_status": "accept",
+    "expiry_time": "2025-05-14 16:44:50",
+    "currency": "IDR",
+    "signature_key": "c9c5f650fc9874951651bc311691af0ce0f6b16e9a52c641d381f8a3e72124c7cb2dde14d7ef17805f66e96bbe83429494c85fb4811aed0e89e6444569002664"
+  }
+  

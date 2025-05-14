@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,7 +18,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
+  const [lastSent, setLastSent] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    if (lastSent) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - lastSent) / 1000);
+        const remaining = 60 - elapsed;
+        if (remaining > 0) {
+          setSecondsLeft(remaining);
+        } else {
+          setSecondsLeft(0);
+          clearInterval(interval);
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [lastSent]);
 
   const handleLoginEmail = async () => {
     setLoading(true);
@@ -43,6 +62,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (lastSent && Date.now() - lastSent < 60 * 1000) {
+      toast.error("Kode sudah dikirim. Tunggu 1 menit ya sebelum kirim ulang ⏳");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/request-wa-login", {
@@ -51,10 +75,16 @@ export default function LoginPage() {
         body: JSON.stringify({ phone }),
       });
 
+      if (res.status === 429) {
+        toast.error("Tunggu sebentar sebelum kirim ulang OTP ya kak 🕐");
+        return;
+      }
+
       if (!res.ok) throw new Error("Gagal kirim kode. Coba lagi ya 🥲");
 
       toast.success("Kode OTP udah dikirim ke WhatsApp kamu 📲");
       setStep(2);
+      setLastSent(Date.now());
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -140,6 +170,9 @@ export default function LoginPage() {
                 >
                   {loading ? <Loader2 className="animate-spin" /> : "Kirim Kode OTP 🔐"}
                 </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  ⚠️ Kamu cuma bisa minta OTP 1x setiap 1 menit
+                </p>
               </>
             )}
 
@@ -162,6 +195,18 @@ export default function LoginPage() {
                 >
                   {loading ? <Loader2 className="animate-spin" /> : "Masuk Sekarang 🚀"}
                 </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full text-xs mt-2"
+                  onClick={handleKirimOtp}
+                  disabled={loading || secondsLeft > 0}
+                >
+                  {secondsLeft > 0
+                    ? `⏳ Kirim ulang OTP dalam ${secondsLeft}s`
+                    : "🔁 Kirim Ulang OTP"}
+                </Button>
+
                 <Button
                   variant="ghost"
                   className="text-xs w-full"

@@ -1,4 +1,3 @@
-// /app/api/ticket/update-expired/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -6,26 +5,46 @@ export async function GET() {
   try {
     const now = new Date();
 
-    // 🔎 Update semua tiket yang aktif dan sudah melewati batas waktu
-    const updated = await prisma.ticket.updateMany({
+    // Ambil semua tiket yang aktif dan sudah lewat batas waktu
+    const expiredTickets = await prisma.ticket.findMany({
       where: {
         statusLelang: {
-          in: ["BERLANGSUNG", "BOOKED"], // hanya status yang bisa kedaluwarsa
+          in: ["BERLANGSUNG", "BOOKED"],
         },
         batas_waktu: {
           not: null,
-          lt: now, // sudah lewat
+          lt: now,
         },
       },
-      data: {
-        statusLelang: "SELESAI",
+      include: {
+        bids: {
+          orderBy: {
+            amount: "desc", // cari bid tertinggi
+          },
+          take: 1, // ambil hanya 1 bid tertinggi
+        },
       },
     });
 
-    // 🔁 Balikan respon singkat saja
+    let updatedCount = 0;
+
+    for (const ticket of expiredTickets) {
+      const highestBid = ticket.bids[0]; // bisa undefined
+
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          statusLelang: "SELESAI",
+          pemenangId: highestBid ? highestBid.userId : null,
+        },
+      });
+
+      updatedCount++;
+    }
+
     return NextResponse.json({
       message: "Update lelang selesai dijalankan.",
-      updatedCount: updated.count,
+      updatedCount,
     });
   } catch (error) {
     console.error("❌ Gagal menjalankan update-expired:", error);

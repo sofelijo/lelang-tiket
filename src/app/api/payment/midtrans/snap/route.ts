@@ -11,8 +11,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { pembayaranId, metode } = await req.json();
-  const metodeSnap = metode?.toLowerCase() || "bank_transfer";
+  const metodeSnap = (metode?.toLowerCase() || "bank_transfer") as
+    | "qris"
+    | "credit_card"
+    | "bank_transfer"
+    | "cstore";
 
+  // Ambil data pembayaran
   const pembayaran = await prisma.pembayaran.findUnique({
     where: { id: Number(pembayaranId) },
     include: {
@@ -41,7 +46,9 @@ export async function POST(req: NextRequest) {
   }
 
   const ticket = pembayaran.ticket;
-  const hargaTiket = ticket.harga_beli ?? 0;
+
+  // ✅ Ambil semua dari data pembayaran, bukan dari ticket langsung
+  const hargaTiket = pembayaran.hargaTiket ?? 0;
   const feePlatform = pembayaran.feePlatform ?? 0;
   const feeMetode = pembayaran.feeMetode ?? 0;
   const feeFlat = pembayaran.feeMetodeFlat ?? 0;
@@ -54,6 +61,7 @@ export async function POST(req: NextRequest) {
     serverKey: process.env.MIDTRANS_SERVER_KEY!,
   });
 
+  // Format waktu kadaluarsa
   const now = new Date();
   const jakartaTime = now.toLocaleString("en-US", {
     timeZone: "Asia/Jakarta",
@@ -66,7 +74,9 @@ export async function POST(req: NextRequest) {
     hour12: false,
   }).replace(",", "");
 
-  const [mm, dd, yyyy, hh, mi, ss] = jakartaTime.match(/\d+/g)!.map((v) => v.padStart(2, "0"));
+  const [mm, dd, yyyy, hh, mi, ss] = jakartaTime.match(/\d+/g)!.map((v) =>
+    v.padStart(2, "0")
+  );
   const startTime = `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
   const expiredAt = new Date(now.getTime() + 30 * 60 * 1000);
 
@@ -113,7 +123,6 @@ export async function POST(req: NextRequest) {
       email: pembayaran.buyer?.email || "user@example.com",
       phone: pembayaran.buyer?.phoneNumber || "081234567890",
     },
-    
     expiry: {
       start_time: `${startTime} +0700`,
       unit: "minute",
@@ -137,11 +146,14 @@ export async function POST(req: NextRequest) {
         data: {
           snapToken: transaction.token,
           qrisExpiredAt: expiredAt,
+          snapMethod: metodeSnap, // ✅ simpan metode Snap
         },
       }),
       prisma.ticket.update({
         where: { id: ticket.id },
-        data: { statusLelang: "BOOKED" },
+        data: {
+          statusLelang: "BOOKED",
+        },
       }),
     ]);
 
