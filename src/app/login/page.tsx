@@ -1,186 +1,239 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<'email' | 'wa'>('email');
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("62");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
+  const [lastSent, setLastSent] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const router = useRouter();
 
-  // Handle login email-password
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (lastSent) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - lastSent) / 1000);
+        const remaining = 60 - elapsed;
+        if (remaining > 0) {
+          setSecondsLeft(remaining);
+        } else {
+          setSecondsLeft(0);
+          clearInterval(interval);
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [lastSent]);
+
+  const handleLoginEmail = async () => {
     setLoading(true);
-
-    const res = await signIn('credentials', {
+    const res = await signIn("credentials", {
       redirect: false,
       email,
       password,
     });
 
-    setLoading(false);
-
     if (res?.ok) {
-      router.push('/');
+      toast.success("Berhasil login! Selamat datang kembali 🎉");
+      router.push("/");
     } else {
-      alert('Email atau password salah');
+      toast.error("Email atau password salah 😭");
     }
+    setLoading(false);
   };
 
-  // Kirim OTP via API
   const handleKirimOtp = async () => {
-    if (!phone.startsWith('62')) {
-      alert('Nomor harus dimulai dengan 62');
+    if (!phone.startsWith("62")) {
+      toast.error("Nomor WA harus diawali dengan 62 ya kak 😅");
+      return;
+    }
+
+    if (lastSent && Date.now() - lastSent < 60 * 1000) {
+      toast.error("Kode sudah dikirim. Tunggu 1 menit ya sebelum kirim ulang ⏳");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch('/api/send-otp', {
-        method: 'POST',
+      const res = await fetch("/api/auth/request-wa-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
-      if (!res.ok) throw new Error();
+      if (res.status === 429) {
+        toast.error("Tunggu sebentar sebelum kirim ulang OTP ya kak 🕐");
+        return;
+      }
 
-      setOtpSent(true);
-      alert('Kode OTP telah dikirim!');
-    } catch {
-      alert('Gagal mengirim OTP');
+      if (!res.ok) throw new Error("Gagal kirim kode. Coba lagi ya 🥲");
+
+      toast.success("Kode OTP udah dikirim ke WhatsApp kamu 📲");
+      setStep(2);
+      setLastSent(Date.now());
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle login pakai OTP
-  const handleOtpLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLoginOtp = async () => {
     setLoading(true);
-
-    const res = await signIn('wa-otp', {
+    const res = await signIn("wa-otp", {
       redirect: false,
       phone,
       code: otp,
     });
 
-    setLoading(false);
-
     if (res?.ok) {
-      router.push('/');
+      toast.success("Berhasil login! Selamat datang kembali 🎉");
+      router.push("/");
     } else {
-      alert('OTP salah atau sudah kedaluwarsa');
+      toast.error("OTP salah atau udah expired 😭");
     }
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 bg-gray-800 p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold mb-4 text-white">Login ke MOMEN</h2>
+    <div className="max-w-md mx-auto min-h-screen flex items-center px-4">
+      <Card className="w-full p-6 shadow-xl">
+        <h1 className="text-2xl font-bold mb-2">
+          {mode === "email" ? "📧 Login Pakai Email" : "🚀 Masuk via WhatsApp"}
+        </h1>
+        <p className="text-sm text-muted-foreground mb-4">
+          {mode === "email"
+            ? "Masuk pakai akun email kamu yang udah terdaftar."
+            : "Gak usah ribet. Cukup masukin nomor WA dan kita kirim OTP-nya!"}
+        </p>
+        <Separator className="mb-4" />
 
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setMode('email')}
-          className={`w-full py-2 rounded ${mode === 'email' ? 'bg-blue-600' : 'bg-gray-600'} text-white`}
-        >
-          Login Email
-        </button>
-        <button
-          onClick={() => setMode('wa')}
-          className={`w-full py-2 rounded ${mode === 'wa' ? 'bg-blue-600' : 'bg-gray-600'} text-white`}
-        >
-          Login WhatsApp
-        </button>
-      </div>
-
-      {mode === 'email' ? (
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-2 rounded bg-gray-700 text-white"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-2 rounded bg-gray-700 text-white"
-          />
-          <button
-            type="submit"
-            className="w-full p-2 rounded bg-blue-600 hover:bg-blue-700 transition"
-            disabled={loading}
+        {mode === "email" && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleLoginEmail();
+            }}
+            className="space-y-3"
           >
-            {loading ? 'Loading...' : 'Login'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleOtpLogin} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Nomor WhatsApp (62...)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            className="w-full p-2 rounded bg-gray-700 text-white"
-          />
-          {!otpSent && (
-            <button
-              type="button"
-              onClick={handleKirimOtp}
-              className="w-full p-2 rounded bg-green-600 hover:bg-green-700 transition"
+            <label className="text-sm font-medium">Email</label>
+            <Input
+              placeholder="email@email.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-            >
-              {loading ? 'Mengirim...' : 'Kirim OTP'}
-            </button>
-          )}
+            />
+            <label className="text-sm font-medium">Password</label>
+            <Input
+              placeholder="Password kamu..."
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+            <Button type="submit" className="w-full" disabled={loading || !email || !password}>
+              {loading ? <Loader2 className="animate-spin" /> : "Login Sekarang 🚀"}
+            </Button>
+          </form>
+        )}
 
-          {otpSent && (
+        {mode === "wa" && (
+          <div className="space-y-3">
+            {step === 1 && (
+              <>
+                <label className="text-sm font-medium">Nomor WhatsApp</label>
+                <Input
+                  placeholder="Contoh: 6281234567890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleKirimOtp}
+                  disabled={loading || phone.length < 10}
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : "Kirim Kode OTP 🔐"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  ⚠️ Kamu cuma bisa minta OTP 1x setiap 1 menit
+                </p>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  🔒 Kode OTP udah dikirim ke WhatsApp kamu.
+                </p>
+                <label className="text-sm font-medium">Masukkan Kode OTP</label>
+                <Input
+                  placeholder="6 digit"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  disabled={loading}
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleLoginOtp}
+                  disabled={loading || otp.length < 4}
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : "Masuk Sekarang 🚀"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full text-xs mt-2"
+                  onClick={handleKirimOtp}
+                  disabled={loading || secondsLeft > 0}
+                >
+                  {secondsLeft > 0
+                    ? `⏳ Kirim ulang OTP dalam ${secondsLeft}s`
+                    : "🔁 Kirim Ulang OTP"}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="text-xs w-full"
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                >
+                  🔁 Ganti Nomor
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="text-sm text-center text-muted-foreground mt-6">
+          {mode === "email" ? (
             <>
-              <input
-                type="text"
-                placeholder="Masukkan OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                className="w-full p-2 rounded bg-gray-700 text-white"
-              />
-              <button
-                type="submit"
-                className="w-full p-2 rounded bg-blue-600 hover:bg-blue-700 transition"
-                disabled={loading}
-              >
-                {loading ? 'Login...' : 'Login'}
-              </button>
+              Pengen login cepat pake WA?{" "}
+              <Button variant="link" size="sm" onClick={() => setMode("wa")}>Login via WhatsApp</Button>
+            </>
+          ) : (
+            <>
+              Punya akun email?{" "}
+              <Button variant="link" size="sm" onClick={() => setMode("email")}>Login pakai email</Button>
             </>
           )}
-        </form>
-      )}
-
-      <div className="mt-4 text-center">
-        <p className="text-gray-400 mb-2">Belum punya akun?</p>
-        <button
-          onClick={() => router.push('/register')}
-          className="text-blue-400 hover:text-blue-500 font-semibold"
-        >
-          Daftar
-        </button>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }

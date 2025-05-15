@@ -10,10 +10,10 @@ export async function GET(
   req: NextRequest,
   context: { params: { id: string } }
 ) {
-  const userId = Number(context.params.id);
+  const userId = context.params.id;
   const session = await getServerSession(authOptions);
 
-  if (!session || Number(session.user.id) !== userId) {
+  if (!session || session.user.id !== userId) {
     const response = NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     response.headers.set("Access-Control-Allow-Origin", "*");
     return response;
@@ -42,12 +42,12 @@ export async function PATCH(
   req: NextRequest,
   context: { params: { id: string } }
 ) {
-  const userId = Number(context.params.id);
+  const userId = context.params.id;
   const session = await getServerSession(authOptions);
 
   if (
     !session ||
-    (Number(session.user.id) !== userId && session.user.role !== "ADMIN")
+    (session.user.id !== userId && session.user.role !== "ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

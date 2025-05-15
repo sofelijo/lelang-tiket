@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = parseInt(params.id);
+    const userId = params.id;
     const status = req.nextUrl.searchParams.get("status");
 
     if (!userId || !status) {

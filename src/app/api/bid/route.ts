@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = Number(session.user.id); // ✅ Fix untuk semua userId yang butuh number
+    const userId = session.user.id; // ✅ Fix untuk semua userId yang butuh number
     const body = await req.json();
     const { ticketId, amount } = body;
 

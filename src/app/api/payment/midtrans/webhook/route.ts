@@ -119,7 +119,7 @@ try {
   const waPayload = {
     data: [
       {
-        phone: pembayaran.buyer.phoneNumber, // pastikan user punya phoneNumber
+        phone: pembayaran.buyer?.phoneNumber, // pastikan user punya phoneNumber
         message: pesan,
       },
     ],

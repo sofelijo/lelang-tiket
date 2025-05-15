@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Tiket ini tidak bisa dibeli langsung" }, { status: 400 });
     }
 
-    const userId = parseInt(user.id); // ✨ Fix error: convert id to number
+    const userId = user.id; // ✨ Fix error: convert id to number
 
     // Update status tiket dan buat transaksi
     await prisma.$transaction([

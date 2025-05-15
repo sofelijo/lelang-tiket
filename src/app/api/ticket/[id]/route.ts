@@ -65,7 +65,7 @@ export async function PATCH(
   console.log("📥 PATCH ticket ID:", id);
   if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const userId = Number(session.user.id);
+  const userId = session.user.id;
   console.log("👤 Session userId:", userId);
 
   const existing = await prisma.ticket.findUnique({
@@ -159,7 +159,7 @@ export async function DELETE(
   console.log("📥 DELETE ticket ID:", id);
   if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const userId = Number(session.user.id);
+  const userId = session.user.id;
   console.log("👤 Session userId:", userId);
 
   try {

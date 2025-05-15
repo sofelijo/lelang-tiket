@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await prisma.user.update({
-      where: { id: Number(session.user.id) }, // 🛠️ FIX TYPE
+      where: { id: session.user.id }, // 🛠️ FIX TYPE
       data: { isVerified: true },
     });
 

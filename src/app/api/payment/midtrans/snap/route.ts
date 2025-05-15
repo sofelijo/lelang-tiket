@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   // Ambil data pembayaran
   const pembayaran = await prisma.pembayaran.findUnique({
-    where: { id: Number(pembayaranId) },
+    where: { id: pembayaranId },
     include: {
       buyer: {
         select: {

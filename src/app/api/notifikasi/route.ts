@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   const notifikasi = await prisma.notifikasi.findMany({
-    where: { userId: Number(session.user.id) },
+    where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     take: 20,
   });

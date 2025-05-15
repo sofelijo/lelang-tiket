@@ -77,7 +77,7 @@ export async function GET() {
           konserId: konser.id,
           kategoriId: kategori.id,
           deskripsi,
-          userId: Number(session.user.id),
+          userId: session.user.id,
           jumlah: parseInt(jumlah),
           statusLelang: statusLelang ?? "BERLANGSUNG",
           sebelahan: sebelahan ?? false,

@@ -6,7 +6,7 @@ import axios from "axios";
 const WABLAS_URL = "https://bdg.wablas.com/api/v2/send-message";
 
 export async function sendOtpToWhatsapp(phone: string, code: string) {
-  const message = `Kode OTP kamu untuk verifikasi akun MOMEN: ${code}\nBerlaku selama 5 menit. Jangan kasih ke siapa-siapa ya! 🔒`;
+  const message = `Kode OTP kamu untuk verifikasi akun YUKNAWAR: ${code}\nBerlaku selama 5 menit. Jangan kasih ke siapa-siapa ya! 🔒`;
 
   const payload = {
     data: [

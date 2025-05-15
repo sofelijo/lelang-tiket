@@ -60,11 +60,11 @@ export default function KonfirmasiPage() {
   const waPembeli = pembayaran.buyer?.phoneNumber;
   const waAdmin = "6281234567890"; // bisa diganti
 
-  const urlKonfirmasi = `https://www.momen.com/pembayaran/${pembayaranId}/konfirmasi`;
+  const urlKonfirmasi = `https://www.yuknawar.com/pembayaran/${pembayaranId}/konfirmasi`;
 
   const pesanPenjual = encodeURIComponent(
     `Halo kak ${pembayaran.ticket.user.name}, aku udah bayar tiket konser "${pembayaran.ticket.konser.nama}".\n\n` +
-      `👤 Aku pembeli di momen.com, nomor WA-ku: ${waPembeli}\n` +
+      `👤 Aku pembeli di yuknawar.com, nomor WA-ku: ${waPembeli}\n` +
       `Ini link bukti konfirmasinya ya: ${urlKonfirmasi}\n\n` +
       `Mohon bantuannya untuk segera diproses 🙏✨`
   );

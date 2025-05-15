@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const notif = await prisma.notifikasi.create({
       data: {
-        userId: Number(userId),
+        userId: userId,
         pesan,
         link,
       },

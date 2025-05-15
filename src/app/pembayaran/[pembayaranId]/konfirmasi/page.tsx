@@ -15,7 +15,7 @@ interface PageProps {
 
 export default async function PembayaranPage({ params }: PageProps) {
   const session = await getServerSession(authOptions);
-  const pembayaranId = parseInt(params.pembayaranId);
+  const pembayaranId = params.pembayaranId;
 
   if (!session) {
     redirect("/login");
@@ -32,7 +32,7 @@ export default async function PembayaranPage({ params }: PageProps) {
     redirect("/404");
   }
 
-  const userId = Number(session.user.id);
+  const userId = session.user.id;
   const isBuyer = userId === pembayaran.buyerId;
   const isSeller = userId === pembayaran.ticket.userId;
   const isAdmin = session.user.role === "ADMIN";

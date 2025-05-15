@@ -116,7 +116,7 @@ export default function TambahTiketPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = "Tambah Tiket | MOMEN";
+    document.title = "Tambah Tiket | ";
   }, []);
 
   const handleSearch = async () => {

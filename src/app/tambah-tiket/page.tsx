@@ -10,7 +10,7 @@ export default async function TambahTiketPage() {
   if (!session) redirect("/login");
 
   const user = await prisma.user.findUnique({
-    where: { id: parseInt(session.user.id) },
+    where: { id: session.user.id},
 
   });
   

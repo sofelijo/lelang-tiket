@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { itemId, itemType, content } = await req.json();
-  const userId = Number(session.user.id);
+  const userId = session.user.id;
 
   if (!itemId || !itemType || !content) {
     return NextResponse.json({ message: "itemId, itemType, dan content wajib diisi" }, { status: 400 });

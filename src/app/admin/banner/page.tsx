@@ -114,7 +114,7 @@ export default function KelolaBannerPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-10 space-y-6">
-      <h2 className="text-2xl font-bold text-white">🎨 Kelola Banner MOMEN</h2>
+      <h2 className="text-2xl font-bold text-white">🎨 Kelola Banner YUKNAWAR</h2>
 
       <form onSubmit={handleCreate} className="space-y-4 bg-gray-800/70 p-6 rounded-lg border border-gray-600">
         <div className="grid md:grid-cols-2 gap-4">

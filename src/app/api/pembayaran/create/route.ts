@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     const { ticketId, metodePembayaran } = await req.json();
-    const buyerId = Number(session.user.id);
+    const buyerId = session.user.id;
     const metode = (metodePembayaran || "bank_transfer").toLowerCase() as MetodePembayaran;
 
     const existing = await prisma.pembayaran.findFirst({

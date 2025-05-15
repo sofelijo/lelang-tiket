@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 2. Kirim ke WhatsApp via Wablas
-    const message = `Kode login MOMEN kamu: ${code}.\nBerlaku 5 menit yaa ✨`;
+    const message = `Kode login YUKNAWAR kamu: ${code}.\nBerlaku 5 menit yaa ✨`;
 
     const payload = {
       data: [

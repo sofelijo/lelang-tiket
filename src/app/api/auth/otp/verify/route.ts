@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // 🔄 Update phoneNumber jika belum ada
     const updated = await prisma.user.update({
-      where: { id: Number(session.user.id) },
+      where: { id: session.user.id },
       data: {
         isVerified: true,
         phoneNumber: phoneNumber, // override atau update

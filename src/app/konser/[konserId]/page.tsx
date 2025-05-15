@@ -53,8 +53,6 @@ export default function TiketByKonserPage() {
   const [sortBy, setSortBy] = useState<string>("terpopuler");
   const [isPending, startTransition] = useTransition();
 
-
-
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -229,7 +227,6 @@ export default function TiketByKonserPage() {
             <>➕ Tambah Tiket untuk Konser Ini</>
           )}
         </Button>
-
       </aside>
 
       <section className="lg:w-4/5 space-y-4">
@@ -254,7 +251,9 @@ export default function TiketByKonserPage() {
           {/* Select Kategori */}
           <Select
             value={kategoriAktif ?? "semua"}
-            onValueChange={(val) => setKategoriAktif(val === "semua" ? null : val)}
+            onValueChange={(val) =>
+              setKategoriAktif(val === "semua" ? null : val)
+            }
           >
             <SelectTrigger className="min-w-[140px] h-9 bg-black text-white text-sm border border-white/20 rounded-md px-3">
               <SelectValue placeholder="🟧 Kategori" />
@@ -282,7 +281,7 @@ export default function TiketByKonserPage() {
               </option>
             ))}
           </select>
-
+          <Separator orientation="vertical" className="h-5" />
           {/* Filter Sebelahan */}
           {[true, false].map((val) => (
             <Badge
@@ -300,12 +299,12 @@ export default function TiketByKonserPage() {
               {val ? "✅ Sebelahan" : "🚫 Tidak"}
             </Badge>
           ))}
-
+          <Separator orientation="vertical" className="h-5" />
           {/* Sort by */}
           <Badge
             onClick={() => setSortBy("terpopuler")}
             className={cn(
-              "h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
+              "hidden md:inline-flex h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
               sortBy === "terpopuler"
                 ? "border border-white bg-white/10 text-white"
                 : "border border-white/10 text-muted-foreground bg-transparent"
@@ -314,10 +313,11 @@ export default function TiketByKonserPage() {
             🔥 Terpopuler
           </Badge>
 
+          {/* 🆕 Terbaru → hanya tampil di desktop */}
           <Badge
             onClick={() => setSortBy("terbaru")}
             className={cn(
-              "h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
+              "hidden md:inline-flex h-9 px-3 min-w-[140px] justify-center cursor-pointer text-sm rounded-md transition-all whitespace-nowrap",
               sortBy === "terbaru"
                 ? "border border-white bg-white/10 text-white"
                 : "border border-white/10 text-muted-foreground bg-transparent"
@@ -327,9 +327,7 @@ export default function TiketByKonserPage() {
           </Badge>
         </div>
 
-
-
-        <Card className="p-4 flex items-center justify-between gap-4 bg-gray-100 border-b text-xs uppercase font-semibold text-black tracking-wide">
+        <Card className="hidden md:flex p-4 items-center justify-between gap-4 bg-gray-100 border-b text-xs uppercase font-semibold text-black tracking-wide">
           <div className="flex items-center gap-6 flex-wrap w-full">
             <div
               className="w-[150px] cursor-pointer"
@@ -367,6 +365,34 @@ export default function TiketByKonserPage() {
             <div className="w-[130px]">Jumlah Tiket</div>
           </div>
         </Card>
+        {/* Header Sort - hanya tampil di mobile */}
+        <div className="block md:hidden mb-3">
+          <Select
+            onValueChange={(value) => setSortBy(value)}
+            defaultValue={sortBy}
+          >
+            <SelectTrigger className="w-full h-10 bg-gray-100 text-black border border-gray-300 text-sm font-semibold tracking-wide uppercase">
+              <SelectValue placeholder="Urutkan" />
+            </SelectTrigger>
+            <SelectContent className="bg-white text-sm">
+              <SelectItem value="termurah_satuan">
+                Harga Satuan Termurah
+              </SelectItem>
+              <SelectItem value="termahal_satuan">
+                Harga Satuan Termahal
+              </SelectItem>
+              <SelectItem value="termurah_total">
+                Total Harga Termurah
+              </SelectItem>
+              <SelectItem value="termahal_total">
+                Total Harga Termahal
+              </SelectItem>
+              <SelectItem value="mauhabis">Sisa Waktu Paling Dikit</SelectItem>
+              <SelectItem value="populer">Tiket Terpopuler</SelectItem>
+              <SelectItem value="terbaru">Terbaru</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {loading ? (
           <div className="space-y-3">
@@ -408,13 +434,14 @@ export default function TiketByKonserPage() {
           </div>
         ) : (
           <div className="overflow-y-auto max-h-[65vh] pr-1 scrollable-container">
-            <div className="space-y-3">
+            {/* ✅ MOBILE: grid 2 kolom */}
+            <div className="grid grid-cols-2 gap-4 md:hidden">
               {tiketList.map((tiket) => {
                 const hargaTotal = tiket.hargaTotal;
                 const hargaSatuan = tiket.hargaSatuan;
                 const jamSisa = tiket.batas_waktu
                   ? (new Date(tiket.batas_waktu).getTime() - Date.now()) /
-                  (1000 * 60 * 60)
+                    (1000 * 60 * 60)
                   : null;
                 const waktu = jamSisa !== null ? formatCountdown(jamSisa) : "-";
                 const waktuClass =
@@ -422,36 +449,121 @@ export default function TiketByKonserPage() {
                     ? jamSisa <= 1
                       ? "text-red-500 animate-blink-fast"
                       : jamSisa <= 3
-                        ? "text-red-500 animate-blink-slow"
-                        : jamSisa <= 6
-                          ? "text-red-500"
-                          : jamSisa <= 12
-                            ? "text-yellow-500"
-                            : "text-foreground"
+                      ? "text-red-500 animate-blink-slow"
+                      : jamSisa <= 6
+                      ? "text-red-500"
+                      : jamSisa <= 12
+                      ? "text-yellow-500"
+                      : "text-foreground"
                     : "text-foreground";
 
                 return (
                   <Card
                     key={tiket.id}
-                    className="p-4 flex items-center justify-between gap-4"
+                    className="p-4 flex flex-col gap-3 border border-muted bg-white/90 hover:shadow-lg transition"
+                  >
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <div className="font-semibold text-base text-foreground">
+                        {typeof hargaSatuan === "number" &&
+                        typeof hargaTotal === "number" ? (
+                          <>
+                            Rp{" "}
+                            {(
+                              Math.round(hargaSatuan / 1000) * 1000
+                            ).toLocaleString()}{" "}
+                            <span className="text-xs text-muted-foreground">
+                              / Tiket
+                            </span>
+                            <div className="text-xs text-muted-foreground">
+                              (Total Rp{" "}
+                              {(
+                                Math.round(hargaTotal / 1000) * 1000
+                              ).toLocaleString()}
+                              )
+                            </div>
+                          </>
+                        ) : (
+                          "Rp -"
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="font-medium text-foreground">
+                          {tiket.kategori.nama}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {tiket.jumlah} tiket{" "}
+                          {tiket.sebelahan ? "(bersama)" : "(terpisah)"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 w-full">
+                      <div className={cn("text-sm font-medium", waktuClass)}>
+                        {waktu}
+                      </div>
+                      <a
+                        href={`/ticket/${tiket.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-[120px]"
+                      >
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white w-full"
+                        >
+                          {tiket.kelipatan ? "Bid" : "Beli"}
+                        </Button>
+                      </a>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* ✅ DESKTOP: list vertikal */}
+            <div className="hidden md:flex flex-col gap-4">
+              {tiketList.map((tiket) => {
+                const hargaTotal = tiket.hargaTotal;
+                const hargaSatuan = tiket.hargaSatuan;
+                const jamSisa = tiket.batas_waktu
+                  ? (new Date(tiket.batas_waktu).getTime() - Date.now()) /
+                    (1000 * 60 * 60)
+                  : null;
+                const waktu = jamSisa !== null ? formatCountdown(jamSisa) : "-";
+                const waktuClass =
+                  jamSisa !== null
+                    ? jamSisa <= 1
+                      ? "text-red-500 animate-blink-fast"
+                      : jamSisa <= 3
+                      ? "text-red-500 animate-blink-slow"
+                      : jamSisa <= 6
+                      ? "text-red-500"
+                      : jamSisa <= 12
+                      ? "text-yellow-500"
+                      : "text-foreground"
+                    : "text-foreground";
+
+                return (
+                  <Card
+                    key={tiket.id}
+                    className="p-4 hidden md:flex justify-between items-center bg-white border"
                   >
                     <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
                       <div className="w-[150px] font-bold text-base text-foreground">
-                        {typeof tiket.estimasiSatuan === "number"
+                        {typeof hargaSatuan === "number"
                           ? `Rp ${(
-                            Math.round(tiket.estimasiSatuan / 1000) * 1000
-                          ).toLocaleString()}`
+                              Math.round(hargaSatuan / 1000) * 1000
+                            ).toLocaleString()}`
                           : "Rp -"}
                       </div>
-
                       <div className="w-[120px]">
-                        {typeof tiket.estimasiTotal === "number"
+                        {typeof hargaTotal === "number"
                           ? `Rp ${(
-                            Math.round(tiket.estimasiTotal / 1000) * 1000
-                          ).toLocaleString()}`
+                              Math.round(hargaTotal / 1000) * 1000
+                            ).toLocaleString()}`
                           : "Rp -"}
                       </div>
-
                       <div className="w-[100px]">{tiket.kategori.nama}</div>
                       <div className={cn("w-[100px] font-medium", waktuClass)}>
                         {waktu}
@@ -468,7 +580,7 @@ export default function TiketByKonserPage() {
                     >
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white w-full"
+                        className="bg-green-600 hover:bg-green-700 text-white w-full md:w-[100px]"
                       >
                         {tiket.kelipatan ? "Bid" : "Beli"}
                       </Button>

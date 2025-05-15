@@ -15,34 +15,34 @@ model Wilayah {
   @@map("wilayah")
 }
 
-  model User {
-    id            Int          @id @default(autoincrement())
-    name          String?
-    email         String?      @unique
-    password      String?
-    phoneNumber   String?      @unique
-    isVerified    Boolean      @default(false)
-    role          Role         @default(USER)
-    username      String       @unique
-    image         String?
-    bio           String?
-    namaBank      String?
-    rekeningBank  String?
-    wilayahId     String?
-    createdAt     DateTime     @default(now())
-    updatedAt     DateTime     @updatedAt
-    bids          Bid[]
-    Comment       Comment[]
-    pembayaran    Pembayaran[]
-    ticketsMenang Ticket[]     @relation("TicketPemenang")
-    tickets       Ticket[]
-    wilayah       Wilayah?     @relation("WilayahUsers", fields: [wilayahId], references: [kode])
-
-    OtpLogin OtpLogin[]
-
-    Notifikasi Notifikasi[]
-    Aktivitas Aktivitas[]
-  }
+model User {
+  name              String?
+  email             String?             @unique
+  password          String?
+  phoneNumber       String?             @unique
+  isVerified        Boolean             @default(false)
+  role              Role                @default(USER)
+  username          String              @unique
+  image             String?
+  bio               String?
+  namaBank          String?
+  rekeningBank      String?
+  wilayahId         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  id                String              @id @default(uuid())
+  Aktivitas         Aktivitas[]
+  bids              Bid[]
+  Comment           Comment[]
+  Notifikasi        Notifikasi[]
+  OtpLogin          OtpLogin[]
+  pembayaran        Pembayaran[]
+  RequestKonser     RequestKonser[]
+  RequestKonserLike RequestKonserLike[]
+  ticketsMenang     Ticket[]            @relation("TicketPemenang")
+  tickets           Ticket[]
+  wilayah           Wilayah?            @relation("WilayahUsers", fields: [wilayahId], references: [kode])
+}
 
 model Konser {
   id             Int              @id @default(autoincrement())
@@ -50,12 +50,12 @@ model Konser {
   lokasi         String
   tanggal        DateTime
   venue          String?
-  image         String?
+  image          String?
   Comment        Comment[]
   konserKategori KonserKategori[]
   tiket          Ticket[]
 }
-// prisma/schema.prisma
+
 model OtpLogin {
   id        Int      @id @default(autoincrement())
   phone     String
@@ -63,8 +63,8 @@ model OtpLogin {
   createdAt DateTime @default(now())
   isUsed    Boolean  @default(false)
   expiresAt DateTime
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Kategori {
@@ -84,64 +84,58 @@ model Ticket {
   batas_waktu      DateTime?
   deskripsi        String?
   perpanjangan_bid PerpanjanganBid?
-  userId           Int?
   konserId         Int
   kategoriId       Int
   jumlah           Int              @default(1)
   statusLelang     StatusLelang     @default(BERLANGSUNG)
   sebelahan        Boolean?
-  pemenangId       Int?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  userId           String?
+  pemenangId       String?
   bids             Bid[]
   Comment          Comment[]
   pembayaran       Pembayaran[]
   kategori         Kategori         @relation("KategoriToTicket", fields: [kategoriId], references: [id])
   konser           Konser           @relation(fields: [konserId], references: [id])
-  pemenang         User?            @relation("TicketPemenang", fields: [pemenangId], references: [id])
-  user             User?            @relation(fields: [userId], references: [id])
+  pemenang         User?            @relation("TicketPemenang", fields: [pemenangId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user             User?            @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Bid {
   id        Int      @id @default(autoincrement())
   amount    Int
   ticketId  Int
-  userId    Int
   createdAt DateTime @default(now())
+  userId    String?
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Pembayaran {
-  id                       Int              @id @default(autoincrement())
-  order_id                 String?
   ticketId                 Int
-  buyerId                  Int
-  snapMethod                   String?
-  feeMetode                Int?
-  feeMetodeFlat             Int?
-  jumlahTotal             Int
+  jumlahTotal              Int
   kodeUnik                 Int?
   feePlatform              Int
-  hargaTiket Int? // diisi saat create pembayaran (hasil final, udah dihitung backend)
-
   statusPembayaran         StatusPembayaran @default(PENDING)
   tanggalTransferKePenjual DateTime?
   createdAt                DateTime         @default(now())
   updatedAt                DateTime         @updatedAt
   buktiPembayaran          String?
-  snapToken String? // menyimpan token Snap Midtrans
-sudahDipakai     Boolean          @default(false) // ✅ ini kunci validasi final
-    currentStep      Int      @default(1)
   qrisExpiredAt            DateTime?
-  buyer                    User             @relation(fields: [buyerId], references: [id])
+  order_id                 String?
+  feeMetode                Int?
+  snapMethod               String?
+  currentStep              Int              @default(1)
+  snapToken                String?
+  feeMetodeFlat            Int?
+  hargaTiket               Int?
+  sudahDipakai             Boolean          @default(false)
+  id                       String           @id @default(uuid())
+  buyerId                  String?
+  buyer                    User?            @relation(fields: [buyerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ticket                   Ticket           @relation(fields: [ticketId], references: [id])
-
-  @@index([ticketId, buyerId])
 }
-
-//metodePembayaran         MetodePembayaran
-//metodePembayaranManual   MetodePembayaranManual? @relation(fields: [metodePembayaranManualId], references: [id])
 
 model KonserKategori {
   id         Int      @id @default(autoincrement())
@@ -157,12 +151,12 @@ model Comment {
   id        Int      @id @default(autoincrement())
   content   String
   createdAt DateTime @default(now())
-  userId    Int
   konserId  Int?
   ticketId  Int?
+  userId    String?
   konser    Konser?  @relation(fields: [konserId], references: [id])
   ticket    Ticket?  @relation(fields: [ticketId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model MetodePembayaranManual {
@@ -175,11 +169,75 @@ model MetodePembayaranManual {
   nama      String
 }
 
+model Notifikasi {
+  id        String   @id @default(cuid())
+  pesan     String
+  link      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Banner {
+  id        Int       @id @default(autoincrement())
+  title     String
+  imageUrl  String
+  link      String?
+  isActive  Boolean   @default(true)
+  urutan    Int       @default(0)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Aktivitas {
+  id        Int      @id @default(autoincrement())
+  aksi      String
+  detail    String
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model WebhookLog {
+  id        Int      @id @default(autoincrement())
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model RequestKonser {
+  id          Int                 @id @default(autoincrement())
+  nama        String
+  lokasi      String
+  tanggal     DateTime?
+  venue       String?
+  deskripsi   String?
+  image       String?
+  kategoriIds Int[]
+  status      RequestStatus       @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  userId      String?
+  user        User?               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  likes       RequestKonserLike[]
+}
+
+model RequestKonserLike {
+  id              Int           @id @default(autoincrement())
+  requestKonserId Int
+  createdAt       DateTime      @default(now())
+  userId          String?
+  requestKonser   RequestKonser @relation(fields: [requestKonserId], references: [id])
+  user            User?         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
 enum StatusLelang {
-  BOOKED
   PENDING
   BERLANGSUNG
   SELESAI
+  BOOKED
 }
 
 enum PerpanjanganBid {
@@ -207,42 +265,8 @@ enum MetodePembayaran {
   MIDTRANS
 }
 
-
-model Notifikasi {
-  id        String   @id @default(cuid())           // ID notifikasi tetap pakai CUID biar gak urutan
-  userId    Int                                     // Int untuk relasi ke User
-  user      User     @relation(fields: [userId], references: [id])
-  pesan     String                                 // Isi pesan notif (bebas)
-  link      String                                 // Link tujuan saat diklik (contoh: "/ticket/123")
-  isRead    Boolean  @default(false)                // Penanda sudah dibaca
-  createdAt DateTime @default(now())                // Tanggal buat notif
-}
-
-
-model Banner {
-  id          Int      @id @default(autoincrement())
-  title       String
-  imageUrl    String
-  link        String?     // Link tujuan saat banner diklik
-  isActive    Boolean  @default(true)
-  urutan      Int      @default(0)
-  startDate   DateTime?   // Kapan mulai tampil (opsional)
-  endDate     DateTime?   // Kapan selesai tampil (opsional)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Aktivitas {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  aksi      String   // contoh: "UPDATE_TIKET", "DELETE_TIKET"
-  detail    String   // contoh: "Update batas waktu tiket konser Dewa 19"
-  createdAt DateTime @default(now())
-}
-
-model WebhookLog {
-  id        Int      @id @default(autoincrement())
-  payload   Json
-  createdAt DateTime @default(now())
+enum RequestStatus {
+  PENDING
+  DITOLAK
+  DITERIMA
 }
