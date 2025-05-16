@@ -3,10 +3,10 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  console.log("🛡️ Middleware dijalankan:", pathname);
+  //console.log("🛡️ Middleware dijalankan:", pathname);
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  console.log("🔐 Token ditemukan:", !!token);
+  //console.log("🔐 Token ditemukan:", !!token);
 
   const isAdminRoute =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
