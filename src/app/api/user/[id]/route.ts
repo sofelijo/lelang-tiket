@@ -56,8 +56,9 @@ export async function PATCH(
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const phoneNumber = formData.get("phoneNumber") as string;
-    const wilayahKode = formData.get("kelurahanId") as string; // wilayahId = kode
+    const wilayahKode = formData.get("kelurahanId") as string;
     const imageFile = formData.get("image") as File | null;
+    const imageUrlFromString = formData.get("imageUrl") as string | null;
 
     // Validasi kode wilayah
     const wilayah = await prisma.wilayah.findUnique({
@@ -76,13 +77,15 @@ export async function PATCH(
       const uploadPath = path.join(process.cwd(), "public/uploads", filename);
       await writeFile(uploadPath, buffer);
       imageUrl = `/uploads/${filename}`;
+    } else if (imageUrlFromString) {
+      imageUrl = imageUrlFromString;
     }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         name,
-        phoneNumber,
+       
         wilayahId: wilayahKode,
         ...(imageUrl && { image: imageUrl }),
       },

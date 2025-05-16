@@ -151,6 +151,8 @@ export default function ProfilePage() {
     formData.append("kelurahanId", form.kelurahanId);
     if (form.image instanceof File) {
       formData.append("image", form.image);
+    } else if (typeof form.image === "string") {
+      formData.append("imageUrl", form.image); // ⬅️ Tambahkan ini
     }
 
     const res = await fetch(`/api/user/${session?.user?.id}`, {
@@ -187,13 +189,15 @@ export default function ProfilePage() {
       <div className="flex-1">
         <Card className="bg-white shadow-xl rounded-2xl border border-border text-gray-800">
           <CardHeader className="text-center">
-            <h1 className="text-2xl font-bold">🧑‍💼 Data Diri Kamu</h1>
+            <p className="text-2xl font-bold"></p>
           </CardHeader>
 
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6">
+              
               {/* FORM KOLOM KIRI */}
               <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+              <h1 className="text-2xl font-bold text-center">🧑‍💼 Data Diri Kamu</h1>
                 <div>
                   <Label htmlFor="name">Nama Lengkap</Label>
                   <Input
@@ -330,19 +334,21 @@ export default function ProfilePage() {
                 </CardFooter>
               </form>
 
+             
               {/* FOTO KOLOM KANAN */}
-              {/* FOTO KOLOM KANAN */}
-              <div className="flex flex-col items-center gap-2 w-full md:w-48">
+              <div className="flex flex-col items-center gap-2 w-full md:w-80">
                 <p className="text-sm text-muted-foreground mb-1">
                   @{form.username || "username"}
                 </p>
-                
+
                 <img
-  src={imageUrl}
-  alt="Foto Profil"
-  className="w-24 h-24 rounded-xl object-cover ring-2 ring-primary cursor-pointer"
-  onClick={() => document.getElementById("upload-photo")?.click()}
-/>
+                  src={imageUrl}
+                  alt="Foto Profil"
+                  className="w-24 h-24 rounded-xl object-cover ring-2 ring-primary cursor-pointer"
+                  onClick={() =>
+                    document.getElementById("upload-photo")?.click()
+                  }
+                />
 
                 <Input
                   id="upload-photo"
@@ -357,12 +363,12 @@ export default function ProfilePage() {
                   className="hidden"
                 />
                 <span className="text-xs text-muted-foreground text-center mb-2">
-                  Klik buat ganti foto kamu 📸
+                  Klik foto untuk upload 📸
                 </span>
 
-                {/* Pilihan Avatar Default (kotak rounded-xl) */}
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 10 }).map((_, i) => {
+                {/* Pilihan Avatar Default (4 kolom x 5 baris, total 20) */}
+                <div className="grid grid-cols-5 gap-3">
+                  {Array.from({ length: 30 }).map((_, i) => {
                     const src = `/images/default-avatar${i + 1}.png`;
                     return (
                       <img
