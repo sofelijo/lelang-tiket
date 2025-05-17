@@ -22,7 +22,7 @@ export async function GET(
         bids: {
           orderBy: { createdAt: "desc" },
           include: {
-            user: { select: { id: true, name: true, username: true } },
+            user: { select: { id: true, name: true, username: true ,image: true,} },
           },
         },
         user: {

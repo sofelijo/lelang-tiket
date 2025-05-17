@@ -25,7 +25,7 @@ export default function DetailTiketPage() {
   const [isLoadingBid, setIsLoadingBid] = useState(false);
   const [isLoadingBuy, setIsLoadingBuy] = useState(false);
   const { data: session } = useSession();
-
+  const [showMore, setShowMore] = useState(false);
   useEffect(() => {
     console.log("Session:", session);
   }, [session]);
@@ -145,7 +145,7 @@ export default function DetailTiketPage() {
   const penjualSelesai = ticket.user.tickets?.length || 0;
   const bidTertinggi = ticket.bids?.[0];
   const encodedPath = encodeURI(ticket.user?.image || "");
-  const imageUrl = encodedPath.startsWith("/uploads/")
+  const imageUrl = encodedPath.startsWith("/")
     ? encodedPath
     : "/images/default-avatar.png";
 
@@ -197,8 +197,23 @@ export default function DetailTiketPage() {
                   🎟️ {ticket.sebelahan ? "Sebelahan 👫" : "Terpisah 👋"}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground ">
-                <span className="font-semibold">{ticket.deskripsi} </span>
+              <p className="text-sm text-muted-foreground">
+                <span
+                  className={cn(
+                    "font-semibold inline-block transition-all",
+                    !showMore && "line-clamp-1"
+                  )}
+                >
+                  {ticket.deskripsi}
+                </span>
+                {ticket.deskripsi.length > 80 && (
+                  <button
+                    onClick={() => setShowMore(!showMore)}
+                    className="ml-1 text-green-600 text-xs underline"
+                  >
+                    {showMore ? "Lihat Lebih Sedikit" : "Lihat Selengkapnya"}
+                  </button>
+                )}
               </p>
               <Card className="flex items-stretch overflow-hidden">
                 <img
@@ -276,7 +291,7 @@ export default function DetailTiketPage() {
                       {/* Foto User */}
                       <img
                         src={
-                          ticket.bids[0].user?.image?.startsWith("/uploads/")
+                          ticket.bids[0].user?.image?.startsWith("/")
                             ? ticket.bids[0].user.image
                             : "/images/default-avatar.png"
                         }
@@ -352,7 +367,7 @@ export default function DetailTiketPage() {
                     <div className="w-20 h-20 bg-white flex items-center justify-center border-r border-green-200">
                       <img
                         src={
-                          ticket.pemenang?.image?.startsWith("/uploads/")
+                          ticket.pemenang?.image?.startsWith("/")
                             ? ticket.pemenang.image
                             : "/images/default-avatar.png"
                         }

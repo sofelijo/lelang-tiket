@@ -21,9 +21,13 @@ export async function POST(req: Request) {
         bids: {
           orderBy: { createdAt: 'desc' },
           take: 1,
+          include: {
+            user: true, // ✅ tambahkan ini!
+          },
         },
         konser: true,
-      },
+      }
+      
     });
 
     if (!ticket) {
