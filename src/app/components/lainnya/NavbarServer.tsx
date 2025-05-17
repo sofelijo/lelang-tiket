@@ -108,7 +108,7 @@ function NavbarClient() {
       <div className="max-w-screen-xl mx-auto px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center justify-between w-full md:w-auto">
           <Link href="/" className="text-white text-xl">
-            <span className="font-bold">YUK</span>NAWAR
+            <span className="font-bold">YUK</span>NAWAR 🚨 TESTING MODE 🚨
           </Link>
         </div>
 
