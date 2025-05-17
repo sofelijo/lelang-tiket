@@ -19,31 +19,36 @@ export async function POST(req: NextRequest) {
   try {
     console.log("📥 Webhook diterima");
 
-const rawBody = await req.text();
-const body = JSON.parse(rawBody);
+    const rawBody = await req.text();
+    const body = JSON.parse(rawBody);
 
-const signatureHeader = req.headers.get("x-callback-signature");
-console.log("🔑 Signature dari header:", signatureHeader);
+    const signatureHeader = req.headers.get("x-callback-signature");
+    console.log("🔑 Signature dari header:", signatureHeader);
 
-const expectedSignature = crypto
-  .createHmac("sha512", MIDTRANS_SERVER_KEY)
-  .update(rawBody)
-  .digest("hex");
+    const expectedSignature = crypto
+      .createHmac("sha512", MIDTRANS_SERVER_KEY)
+      .update(rawBody)
+      .digest("hex");
 
-console.log("🔐 Signature yang dihitung:", expectedSignature);
-console.log("📦 Raw body:", rawBody);
-
+    console.log("🔐 Signature yang dihitung:", expectedSignature);
+    console.log("📦 Raw body:", rawBody);
 
     if (signatureHeader !== expectedSignature) {
       console.warn("❌ Signature tidak cocok");
-      return NextResponse.json({ message: "Invalid signature" }, { status: 403 });
+      return NextResponse.json(
+        { message: "Invalid signature" },
+        { status: 403 }
+      );
     }
 
     const { order_id, transaction_status, status_code, gross_amount } = body;
 
     if (!order_id || !transaction_status || !status_code || !gross_amount) {
       console.warn("⚠️ Data tidak lengkap");
-      return NextResponse.json({ message: "Missing required data" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Missing required data" },
+        { status: 400 }
+      );
     }
 
     const statusPembayaran = statusMap[transaction_status] || "PENDING";
@@ -61,31 +66,65 @@ console.log("📦 Raw body:", rawBody);
     });
 
     if (updated.count === 0) {
-      return NextResponse.json({ message: "No pembayaran matched" }, { status: 404 });
+      return NextResponse.json(
+        { message: "No pembayaran matched" },
+        { status: 404 }
+      );
     }
 
     // Ambil detail pembayaran
     const pembayaran = await prisma.pembayaran.findFirst({
       where: { order_id },
       include: {
-        ticket: true,
+        ticket: {
+          include: {
+            konser: true,
+            kategori: true,
+          },
+        },
         buyer: true,
       },
     });
 
     if (!pembayaran) {
-      return NextResponse.json({ message: "Pembayaran tidak ditemukan (2nd fetch)" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Pembayaran tidak ditemukan (2nd fetch)" },
+        { status: 404 }
+      );
     }
 
+    // Setelah pembayaran valid, baru bisa akses relasinya
+    const konser = pembayaran.ticket.konser;
+    const kategori = pembayaran.ticket.kategori;
+    const buyer = pembayaran.buyer;
+
+    const waktuBayar = new Date().toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+    });
+    const tanggalKonser = new Date(konser.tanggal).toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const linkKonfirmasi = `${process.env.BASE_URL}/pembayaran/${pembayaran.id}/konfirmasi`;
+
     // Update status tiket
-    if (statusPembayaran === "BERHASIL" && pembayaran.ticket.statusLelang !== "SELESAI") {
+    if (
+      statusPembayaran === "BERHASIL" &&
+      pembayaran.ticket.statusLelang !== "SELESAI"
+    ) {
       await prisma.ticket.update({
         where: { id: pembayaran.ticketId },
         data: { statusLelang: "SELESAI" },
       });
     }
 
-    if (statusPembayaran === "GAGAL" && pembayaran.ticket.statusLelang === "BOOKED") {
+    if (
+      statusPembayaran === "GAGAL" &&
+      pembayaran.ticket.statusLelang === "BOOKED"
+    ) {
       await prisma.ticket.update({
         where: { id: pembayaran.ticketId },
         data: { statusLelang: "BERLANGSUNG" },
@@ -94,9 +133,30 @@ console.log("📦 Raw body:", rawBody);
 
     // Notifikasi dan aktivitas
     const pesan =
-      statusPembayaran === "BERHASIL"
-        ? `🎉 Pembayaran kamu berhasil untuk tiket konser ID ${pembayaran.ticket.konserId}.`
-        : `⚠️ Pembayaran kamu gagal untuk tiket konser ID ${pembayaran.ticket.konserId}.`;
+  statusPembayaran === "BERHASIL"
+    ? `Hai ${buyer?.name || "Sobat YUKNAWAR"} 👋
+
+Makasih banget udah menyelesaikan pembayaran di *YUKNAWAR*! 🎉
+Berikut ini rincian pemesanan kamu:
+
+🧾 *Order ID:* ${pembayaran.order_id}
+⏰ *Waktu Pembayaran Berhasil:* ${waktuBayar}
+
+🎤 *${konser.nama}*
+📅 ${tanggalKonser}
+📍 ${konser.lokasi}${konser.venue ? " - " + konser.venue : ""}
+
+🎟️ Kategori: ${kategori?.nama}
+🔢 Jumlah Tiket: ${pembayaran.ticket.jumlah}
+
+✅ Untuk lanjut konfirmasi ke penjual, kamu bisa klik link ini ya (login dulu kalau belum):
+🔗 ${linkKonfirmasi}
+
+⚠️ Pastikan kamu hanya hubungi nomor yang tertera di platform kami ya, biar aman dari penipuan.
+
+Thank you for trusting us! 🎫`
+    : `⚠️ Pembayaran kamu gagal untuk tiket konser *${konser.nama}*.`;
+
 
     await prisma.notifikasi.create({
       data: {
@@ -115,35 +175,42 @@ console.log("📦 Raw body:", rawBody);
     });
 
     // 7. 📲 Kirim WhatsApp via Wablas
-try {
-  const waPayload = {
-    data: [
-      {
-        phone: pembayaran.buyer?.phoneNumber, // pastikan user punya phoneNumber
-        message: pesan,
-      },
-    ],
-  };
+    try {
+      const waPayload = {
+        data: [
+          {
+            phone: pembayaran.buyer?.phoneNumber, // pastikan user punya phoneNumber
+            message: pesan,
+          },
+        ],
+      };
 
-  const waRes = await axios.post("https://bdg.wablas.com/api/v2/send-message", waPayload, {
-    headers: {
-      Authorization: process.env.WABLAS_TOKEN!, // pastikan ada token
-      "Content-Type": "application/json",
-    },
-  });
+      const waRes = await axios.post(
+        "https://bdg.wablas.com/api/v2/send-message",
+        waPayload,
+        {
+          headers: {
+            Authorization: process.env.WABLAS_TOKEN!, // pastikan ada token
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  if (!waRes.data.status) {
-    console.warn("⚠️ Gagal kirim WA:", waRes.data);
-  } else {
-    console.log("✅ WA berhasil dikirim");
-  }
-} catch (waError) {
-  console.error("❌ Error kirim WA:", waError);
-}
+      if (!waRes.data.status) {
+        console.warn("⚠️ Gagal kirim WA:", waRes.data);
+      } else {
+        console.log("✅ WA berhasil dikirim");
+      }
+    } catch (waError) {
+      console.error("❌ Error kirim WA:", waError);
+    }
 
     return NextResponse.json({ message: "Pembayaran updated" });
   } catch (err) {
     console.error("🔥 Webhook Error:", err);
-    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to process webhook" },
+      { status: 500 }
+    );
   }
 }
