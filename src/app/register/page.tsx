@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -22,6 +30,8 @@ export default function RegisterPage() {
   const [usernameTaken, setUsernameTaken] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
   const [phoneTaken, setPhoneTaken] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
 
   const router = useRouter();
 
@@ -41,7 +51,8 @@ export default function RegisterPage() {
     confirmValid &&
     !usernameTaken &&
     !emailTaken &&
-    !phoneTaken;
+    !phoneTaken &&
+    acceptedTerms;
 
   const checkExists = async (type: "username" | "email" | "phone", value: string) => {
     if (!value) return;
@@ -195,6 +206,27 @@ export default function RegisterPage() {
               <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>
             )}
           </div>
+          <div className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              id="terms"
+              className="mt-1"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+            />
+            <label htmlFor="terms">
+              Saya telah membaca dan menyetujui{" "}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-blue-600 hover:text-blue-800"
+              >
+                Syarat & Ketentuan Yuknawar
+              </a>
+            </label>
+          </div>
+
 
           <Button type="submit" className="w-full mt-2" disabled={!isValid}>
             Daftar Sekarang
