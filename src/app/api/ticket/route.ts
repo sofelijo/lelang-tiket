@@ -54,6 +54,7 @@ export async function GET() {
       jumlah,
       statusLelang,
       sebelahan,
+      row,
     } = body;
 
     try {
@@ -81,6 +82,7 @@ export async function GET() {
           jumlah: parseInt(jumlah),
           statusLelang: statusLelang ?? "BERLANGSUNG",
           sebelahan: sebelahan ?? false,
+          row: body.row || null, // ✅ tambahkan ini
         },
       });
 

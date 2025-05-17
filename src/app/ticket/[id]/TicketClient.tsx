@@ -265,7 +265,6 @@ export default function DetailTiketPage() {
           </Card>
         </div>
 
-
         {ticket.kelipatan !== null && (
           <div className="space-y-4">
             <Card className="p-4 space-y-4 h-full min-h-[500px] flex flex-col justify-between">
@@ -282,7 +281,7 @@ export default function DetailTiketPage() {
                             : "/images/default-avatar.png"
                         }
                         alt="User"
-                        className="w-12 h-12 rounded-full object-cover border border-green-300"
+                        className="w-16 h-16 rounded-lg object-cover border border-green-300"
                       />
 
                       {/* Info User + Estimasi */}
@@ -308,7 +307,6 @@ export default function DetailTiketPage() {
                     </div>
                   </Card>
                 )}
-
 
               <div className="bg-muted rounded-md p-3 h-64 overflow-y-auto space-y-2 border border-muted-foreground/10">
                 <h3 className="font-semibold text-sm">📈 Riwayat Tawaran</h3>
@@ -336,10 +334,11 @@ export default function DetailTiketPage() {
                         {bid.user?.username ?? "anonim"} • {/* waktu */}
                         {(() => {
                           const tgl = new Date(bid.createdAt);
-                          return `${tgl.getDate()}/${tgl.getMonth() + 1
-                            } ${tgl.getHours()}:${String(
-                              tgl.getMinutes()
-                            ).padStart(2, "0")}`;
+                          return `${tgl.getDate()}/${
+                            tgl.getMonth() + 1
+                          } ${tgl.getHours()}:${String(
+                            tgl.getMinutes()
+                          ).padStart(2, "0")}`;
                         })()}
                       </span>
                     </div>
@@ -367,13 +366,12 @@ export default function DetailTiketPage() {
                         🏁 Lelang udah kelar gengs!
                       </p>
                       <p className="text-xs mt-1 text-muted-foreground">
-                        Congratz buat sang pemenang!{" "}<br></br>
+                        Congratz buat sang pemenang! <br></br>
                         <span className="font-bold text-primary">
                           @{ticket.pemenang?.username ?? "(anonim)"}
                         </span>{" "}
                         🎉
                       </p>
-
                     </div>
                   </Alert>
 
@@ -411,7 +409,7 @@ export default function DetailTiketPage() {
                         disabled={
                           !ticket.harga_awal ||
                           bidAmount <=
-                          (ticket.bids?.[0]?.amount ?? ticket.harga_awal)
+                            (ticket.bids?.[0]?.amount ?? ticket.harga_awal)
                         }
                       >
                         -
@@ -477,7 +475,6 @@ export default function DetailTiketPage() {
             </Card>
           </div>
         )}
-
 
         <div>
           <CommentSection

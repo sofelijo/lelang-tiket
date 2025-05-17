@@ -37,7 +37,7 @@ export default function TambahTiketPage() {
   useEffect(() => {
     const stepParam = searchParams.get("step");
     const konserIdParam = searchParams.get("konserId");
-  
+
     if (stepParam === "2" && konserIdParam) {
       // fetch konser dari API
       fetch(`/api/konser/${konserIdParam}`)
@@ -81,6 +81,7 @@ export default function TambahTiketPage() {
     harga: string;
     tipeTempat: string;
     seat: string;
+    row: string; // ✅ tambahkan ini
     kategoriId: number | null;
     harga_awal: string;
     harga_beli: string;
@@ -94,6 +95,7 @@ export default function TambahTiketPage() {
     harga: "",
     tipeTempat: "",
     seat: "",
+    row: "", // ✅ inisialisasi default
     kategoriId: null,
     harga_awal: "",
     harga_beli: "",
@@ -103,6 +105,7 @@ export default function TambahTiketPage() {
     deskripsi: "",
     sebelahan: false,
   });
+
   const [selectedJam, setSelectedJam] = useState("23:59"); // Default jam awal
 
   const updateDetailWaktu = (jamString: string) => {
@@ -154,7 +157,7 @@ export default function TambahTiketPage() {
       .catch((err) => console.error("Gagal fetch top konser:", err))
       .finally(() => setLoadingTopKonser(false));
   }, []);
-  
+
   // 🔁 Fetch kategori saat konser dipilih
   useEffect(() => {
     if (!selectedKonser?.id) return;
@@ -196,6 +199,7 @@ export default function TambahTiketPage() {
       deskripsi: detail.deskripsi || "",
       jumlah: detail.jumlah,
       statusLelang: tipeJual === "LELANG" ? "BERLANGSUNG" : "SELESAI",
+      row: detail.row || null,
     };
 
     console.log("🚀 Payload kirim tiket:", payload);
@@ -300,54 +304,55 @@ export default function TambahTiketPage() {
 
           {/* Saat search kosong => tampilkan top konser */}
           {!loading && searchQuery.trim() === "" && (
-  <div className="space-y-2">
-    <p className="text-muted-foreground font-medium">
-      🔥 Konser Terpopuler
-    </p>
+            <div className="space-y-2">
+              <p className="text-muted-foreground font-medium">
+                🔥 Konser Terpopuler
+              </p>
 
-    {loadingTopKonser ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <TicketCardSkeleton key={i} />
-        ))}
-      </div>
-    ) : topKonser.length > 0 ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {topKonser.map((k) => (
-          <TicketCard
-            key={k.id}
-            namaKonser={k.nama}
-            tanggal={new Date(k.tanggal).toLocaleDateString("id-ID")}
-            lokasi={k.lokasi}
-            jumlahTiket={k.jumlahTiket}
-            tipeTempat={k.tipeTempat}
-            venue={k.venue}
-            image={k.image}
-            onClick={() => {
-              setSelectedKonser(k);
-              toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
-            }}
-            onDoubleClick={() => {
-              setSelectedKonser(k);
-              setStep(2);
-              toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
-            }}
-            className={
-              selectedKonser?.id === k.id
-                ? "ring-2 ring-primary scale-[1.02]"
-                : ""
-            }
-          />
-        ))}
-      </div>
-    ) : (
-      <p className="text-sm text-muted-foreground">
-        Belum ada konser terpopuler 🫠
-      </p>
-    )}
-  </div>
-)}
-
+              {loadingTopKonser ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <TicketCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : topKonser.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {topKonser.map((k) => (
+                    <TicketCard
+                      key={k.id}
+                      namaKonser={k.nama}
+                      tanggal={new Date(k.tanggal).toLocaleDateString("id-ID")}
+                      lokasi={k.lokasi}
+                      jumlahTiket={k.jumlahTiket}
+                      tipeTempat={k.tipeTempat}
+                      venue={k.venue}
+                      image={k.image}
+                      onClick={() => {
+                        setSelectedKonser(k);
+                        toast.success(
+                          `✌️ Klik dua kali aja biar langsung gas!`
+                        );
+                      }}
+                      onDoubleClick={() => {
+                        setSelectedKonser(k);
+                        setStep(2);
+                        toast.success(`🎉 Langsung ke Step 2 bareng ${k.nama}`);
+                      }}
+                      className={
+                        selectedKonser?.id === k.id
+                          ? "ring-2 ring-primary scale-[1.02]"
+                          : ""
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Belum ada konser terpopuler 🫠
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Hasil pencarian */}
           {!loading && searchQuery.trim() !== "" && konserList.length > 0 && (
@@ -566,6 +571,43 @@ export default function TambahTiketPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Row atau Queue (label dinamis, value tetap pakai detail.row) */}
+            {/* Row atau Queue */}
+            <div className="flex-1 min-w-[150px]">
+              <label className="text-sm font-medium block mb-1">
+                {detail.tipeTempat === "duduk"
+                  ? "↕️ Baris (Row)"
+                  : "🔀 Antrean (Queue)"}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={
+                    detail.tipeTempat === "duduk" ? "1, A?" : "1, 2, 3?"
+                  }
+                  value={detail.row || ""}
+                  disabled={detail.row === "Tidak Ada"}
+                  onChange={(e) =>
+                    setDetail({ ...detail, row: e.target.value.toUpperCase() })
+                  }
+                  className="w-full border border-input bg-background p-2 rounded-md text-sm disabled:opacity-50"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-xs px-2 py-1"
+                  onClick={() => {
+                    setDetail((prev) => ({
+                      ...prev,
+                      row: prev.row === "Tidak Ada" ? "" : "Tidak Ada",
+                    }));
+                  }}
+                >
+                  {detail.row === "Tidak Ada" ? "Ada?" : "Tidak Ada"}
+                </Button>
+              </div>
             </div>
 
             {/* Sebelahan */}
@@ -846,49 +888,82 @@ export default function TambahTiketPage() {
 
       {step === 4 && (
         <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-bold">4. Konfirmasi & Launching 🚀</h2>
+          <h2 className="text-xl font-bold">4.  {tipeJual === "LELANG" ? "Lelang" : "Jual Langsung"} | Konfirmasi & Launching 🚀 </h2>
           <Separator />
 
           <div className="flex flex-col md:flex-row gap-6">
             {/* Kolom Kiri: Detail */}
             <div className="flex-1 text-sm space-y-2">
               <div>
-                🎤 <b>Konser:</b> {selectedKonser?.nama} -{" "}
-                {kategoriList.find((k) => k.id === detail.kategoriId)?.nama ||
-                  "Kategori tidak ditemukan"}
+                🎤 <b>Konser:</b> {selectedKonser?.nama}{" "}
               </div>
               <div>
                 📍 <b>Tanggal & Lokasi:</b>{" "}
                 {new Date(selectedKonser?.tanggal).toLocaleDateString("id-ID")}{" "}
                 — {selectedKonser?.lokasi}
               </div>
+              
               <div>
-                💼 <b>Metode:</b>{" "}
-                {tipeJual === "LELANG" ? "Lelang" : "Jual Langsung"}
-              </div>
-              <div>
-                🎫 <b>Jumlah Tiket:</b> {detail.jumlah}
+                🎫 <b>Kategori:</b> {kategoriList.find((k) => k.id === detail.kategoriId)?.nama ||
+                  "Kategori tidak ditemukan"}{" | "}{detail.jumlah}{" "}Tiket
               </div>
               <div>
                 🪑 <b>Tipe Tempat Duduk:</b> {detail.tipeTempat}
                 {detail.seat ? ` (${detail.seat})` : ""}
                 {detail.sebelahan ? " /sebelahan" : ""}
               </div>
+              {/* 🔀 Baris atau Antrean */}
+              <div>
+                {detail.tipeTempat === "duduk" ? (
+                  <>
+                    ↕️ <b>Baris (Row):</b>{" "}
+                  </>
+                ) : (
+                  <>
+                    🔀 <b>Antrean (Queue):</b>{" "}
+                  </>
+                )}
+                {detail.row === "NO" ? (
+                  <i>Tidak Ada</i>
+                ) : (
+                  <span>{detail.row || "-"}</span>
+                )}
+              </div>
 
               {tipeJual === "LELANG" ? (
                 <>
-                  <div>
-                    💸 <b>Harga Awal:</b> Rp{" "}
-                    {Number(detail.harga_awal).toLocaleString("id-ID")}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                    {/* Kolom 1 */}
+                    <div className="bg-muted/20 p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs mb-1">
+                        💸 Harga Awal
+                      </div>
+                      <div className="font-semibold">
+                        Rp {Number(detail.harga_awal).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+
+                    {/* Kolom 2 */}
+                    <div className="bg-muted/20 p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs mb-1">
+                        🪙 Kelipatan
+                      </div>
+                      <div className="font-semibold">
+                        Rp {Number(detail.kelipatan).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+
+                    {/* Kolom 3 */}
+                    <div className="bg-muted/20 p-3 rounded-lg">
+                      <div className="text-muted-foreground text-xs mb-1">
+                        🛒 Harga Beli Langsung
+                      </div>
+                      <div className="font-semibold">
+                        Rp {Number(detail.harga_beli).toLocaleString("id-ID")}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    🪙 <b>Kelipatan:</b> Rp{" "}
-                    {Number(detail.kelipatan).toLocaleString("id-ID")}
-                  </div>
-                  <div>
-                    🛒 <b>Harga Beli Langsung:</b> Rp{" "}
-                    {Number(detail.harga_beli).toLocaleString("id-ID")}
-                  </div>
+
                   <div>
                     ⏰ <b>Batas Waktu:</b>{" "}
                     {new Date(detail.batas_waktu).toLocaleString("id-ID", {

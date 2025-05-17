@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Pilih default avatar acak dari 1 sampai 10
-    const randomIndex = Math.floor(Math.random() * 10) + 1;
+    const randomIndex = Math.floor(Math.random() * 30) + 1;
     const randomAvatar = `/images/default-avatar${randomIndex}.png`;
 
     // Simpan user

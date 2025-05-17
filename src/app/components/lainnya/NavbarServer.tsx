@@ -12,7 +12,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-
 import {
   Popover,
   PopoverTrigger,
@@ -51,7 +50,6 @@ function NavbarClient() {
   const { data: session, status } = useSession();
   const [isPending, startTransition] = useTransition();
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
-
 
   const refreshNotif = async () => {
     try {
@@ -109,8 +107,8 @@ function NavbarClient() {
     <nav className="bg-gray-900 text-white sticky top-0 z-50 shadow-sm">
       <div className="max-w-screen-xl mx-auto px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center justify-between w-full md:w-auto">
-          <Link href="/" className="text-xl font-bold text-white">
-            MOMEN
+          <Link href="/" className="text-white text-xl">
+            <span className="font-bold">YUK</span>NAWAR
           </Link>
         </div>
 
@@ -202,7 +200,6 @@ function NavbarClient() {
               <>Listing Tiket</>
             )}
           </button>
-
 
           {session?.user && (
             <>
@@ -300,7 +297,6 @@ function NavbarClient() {
                   <hr className="my-1 border-muted" />
                   <LogoutButton />
                 </PopoverContent>
-
               </Popover>
             </>
           )}
