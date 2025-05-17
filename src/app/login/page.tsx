@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'email' | 'wa'>('email');
+  const [mode, setMode] = useState<"email" | "wa">("email");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("62");
   const [otp, setOtp] = useState("");
@@ -63,7 +63,9 @@ export default function LoginPage() {
     }
 
     if (lastSent && Date.now() - lastSent < 60 * 1000) {
-      toast.error("Kode sudah dikirim. Tunggu 1 menit ya sebelum kirim ulang ⏳");
+      toast.error(
+        "Kode sudah dikirim. Tunggu 1 menit ya sebelum kirim ulang ⏳"
+      );
       return;
     }
 
@@ -146,8 +148,16 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
-            <Button type="submit" className="w-full" disabled={loading || !email || !password}>
-              {loading ? <Loader2 className="animate-spin" /> : "Login Sekarang 🚀"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !email || !password}
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                "Login Sekarang 🚀"
+              )}
             </Button>
           </form>
         )}
@@ -168,7 +178,11 @@ export default function LoginPage() {
                   onClick={handleKirimOtp}
                   disabled={loading || phone.length < 10}
                 >
-                  {loading ? <Loader2 className="animate-spin" /> : "Kirim Kode OTP 🔐"}
+                  {loading ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    "Kirim Kode OTP 🔐"
+                  )}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   ⚠️ Kamu cuma bisa minta OTP 1x setiap 1 menit
@@ -193,7 +207,11 @@ export default function LoginPage() {
                   onClick={handleLoginOtp}
                   disabled={loading || otp.length < 4}
                 >
-                  {loading ? <Loader2 className="animate-spin" /> : "Masuk Sekarang 🚀"}
+                  {loading ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    "Masuk Sekarang 🚀"
+                  )}
                 </Button>
 
                 <Button
@@ -224,15 +242,30 @@ export default function LoginPage() {
           {mode === "email" ? (
             <>
               Pengen login cepat pake WA?{" "}
-              <Button variant="link" size="sm" onClick={() => setMode("wa")}>Login via WhatsApp</Button>
+              <Button variant="link" size="sm" onClick={() => setMode("wa")}>
+                Login via WhatsApp
+              </Button>
             </>
           ) : (
             <>
               Punya akun email?{" "}
-              <Button variant="link" size="sm" onClick={() => setMode("email")}>Login pakai email</Button>
+              <Button variant="link" size="sm" onClick={() => setMode("email")}>
+                Login pakai email
+              </Button>
             </>
           )}
+          <br></br>
+           <span className="text-muted-foreground">Belum punya akun? </span>
+          <Button
+            variant="link"
+            size="sm"
+           
+            onClick={() => router.push("/register")} // atau sesuaikan dengan route kamu
+          >
+            Daftar dulu yuk ✨
+          </Button>
         </div>
+       
       </Card>
     </div>
   );
