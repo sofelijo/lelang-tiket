@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
           include: {
             konser: true,
             kategori: true,
+            user: true,
           },
         },
         buyer: true,
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
     const konser = pembayaran.ticket.konser;
     const kategori = pembayaran.ticket.kategori;
     const buyer = pembayaran.buyer;
+    const penjual = pembayaran.ticket.user;
 
     const waktuBayar = new Date().toLocaleString("id-ID", {
       timeZone: "Asia/Jakarta",
@@ -158,6 +160,30 @@ Thank you for trusting us! 🎫`
     : `⚠️ Pembayaran kamu gagal untuk tiket konser *${konser.nama}*.`;
 
 
+const pesanPenjual = `Hai ${penjual?.name || "Seller Yuknawar"} 👋
+
+Tiket kamu berhasil dibeli oleh *${buyer?.name || "user Yuknawar"}*! 🎉
+Berikut detail tiket yang laku:
+
+🧾 *Order ID:* ${pembayaran.order_id}
+⏰ *Waktu Pembayaran:* ${waktuBayar}
+
+🎤 *${konser.nama}*
+📅 ${tanggalKonser}
+📍 ${konser.lokasi}${konser.venue ? " - " + konser.venue : ""}
+
+🎟️ Kategori: ${kategori?.nama}
+🔢 Jumlah Tiket: ${pembayaran.ticket.jumlah}
+
+Silakan hubungi pembeli dan kirimkan tiket sesuai kesepakatan ya!
+Klik link konfirmasi (wajib login):
+🔗 ${linkKonfirmasi}
+
+⚠️ Pastikan kamu hanya hubungi nomor pembeli yang terdaftar di platform agar terhindar dari penipuan 🙅‍♀️
+
+Makasih udah jualan di YUKNAWAR — semoga laris terus 🎫✨`;
+
+
     await prisma.notifikasi.create({
       data: {
         userId: pembayaran.buyerId,
@@ -165,6 +191,15 @@ Thank you for trusting us! 🎫`
         link: `/pembayaran/${pembayaran.id}`,
       },
     });
+
+    await prisma.notifikasi.create({
+      data: {
+        userId: penjual?.id ?? undefined,
+        pesan: pesanPenjual,
+        link: `/pembayaran/${pembayaran.id}`,
+      },
+    });
+    
 
     await prisma.aktivitas.create({
       data: {
@@ -179,11 +214,18 @@ Thank you for trusting us! 🎫`
       const waPayload = {
         data: [
           {
-            phone: pembayaran.buyer?.phoneNumber, // pastikan user punya phoneNumber
+            phone: pembayaran.buyer?.phoneNumber,
             message: pesan,
           },
-        ],
+          pembayaran.ticket.user?.phoneNumber
+            ? {
+                phone: pembayaran.ticket.user.phoneNumber,
+                message: pesanPenjual,
+              }
+            : null,
+        ].filter(Boolean), // pastikan tidak ada null di array
       };
+      
 
       const waRes = await axios.post(
         "https://bdg.wablas.com/api/v2/send-message",
