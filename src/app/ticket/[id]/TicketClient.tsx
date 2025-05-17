@@ -223,7 +223,7 @@ export default function DetailTiketPage() {
                 />
                 <div className="flex-1 p-4 space-y-1">
                   <a
-                    href={`/username/${ticket.user.username}`}
+                    href={`/profile/${ticket.user.username}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-base font-bold text-black hover:text-green-600"

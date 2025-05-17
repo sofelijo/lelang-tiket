@@ -372,7 +372,7 @@ export default function TiketByKonserPage() {
             defaultValue={sortBy}
           >
             <SelectTrigger className="w-full h-10 bg-gray-100 text-black border border-gray-300 text-sm font-semibold tracking-wide uppercase">
-              <SelectValue placeholder="Urutkan" />
+              <SelectValue placeholder="Urutkan" className="text-black" />
             </SelectTrigger>
             <SelectContent className="bg-white text-sm">
               <SelectItem value="termurah_satuan">

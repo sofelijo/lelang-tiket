@@ -432,50 +432,50 @@ export default function TambahTiketPage() {
             Pilih metode penjualan tiket kamu. Mau rame-rame rebutan lelang,
             atau langsung aja bayar lunas 💸
           </p>
-          <div className="flex gap-3">
-            <Button
-              variant={tipeJual === "LELANG" ? "default" : "outline"}
-              //onClick={() => setTipeJual("LELANG")}
-              onClick={() => {
-                setTipeJual("LELANG");
-                toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
-              }}
-              onDoubleClick={() => {
-                setStep(3);
-                toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
-              }}
-              className="flex-1 py-4 h-auto"
-            >
-              <div className="text-center leading-tight">
-                <div className="text-sm font-bold">🎯 Lelang</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Buka harga awal, <br />
-                  biarin pembeli saling nawar 🔥
-                </div>
-              </div>
-            </Button>
+          <div className="flex flex-col md:flex-row gap-3">
+  <Button
+    variant={tipeJual === "LELANG" ? "default" : "outline"}
+    onClick={() => {
+      setTipeJual("LELANG");
+      toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+    }}
+    onDoubleClick={() => {
+      setStep(3);
+      toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
+    }}
+    className="flex-1 py-4 h-auto"
+  >
+    <div className="text-center leading-tight">
+      <div className="text-sm font-bold">🎯 Lelang</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        Buka harga awal, <br />
+        biarin pembeli saling nawar 🔥
+      </div>
+    </div>
+  </Button>
 
-            <Button
-              variant={tipeJual === "JUAL_LANGSUNG" ? "default" : "outline"}
-              onClick={() => {
-                setTipeJual("JUAL_LANGSUNG");
-                toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
-              }}
-              onDoubleClick={() => {
-                setStep(3);
-                toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
-              }}
-              className="flex-1 py-4 h-auto"
-            >
-              <div className="text-center leading-tight">
-                <div className="text-sm font-bold">💰 Jual Langsung</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Kasih harga fix, <br />
-                  yang siap bayar langsung sikat 💸
-                </div>
-              </div>
-            </Button>
-          </div>
+  <Button
+    variant={tipeJual === "JUAL_LANGSUNG" ? "default" : "outline"}
+    onClick={() => {
+      setTipeJual("JUAL_LANGSUNG");
+      toast.success(`✌️ Klik dua kali aja biar langsung gas!`);
+    }}
+    onDoubleClick={() => {
+      setStep(3);
+      toast.success(`🎉 Langsung ke Step 3 tipe ${tipeJual}`);
+    }}
+    className="flex-1 py-4 h-auto"
+  >
+    <div className="text-center leading-tight">
+      <div className="text-sm font-bold">💰 Jual Langsung</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        Kasih harga fix, <br />
+        yang siap bayar langsung sikat 💸
+      </div>
+    </div>
+  </Button>
+</div>
+
 
           <div className="text-xs text-muted-foreground pt-2">
             Kamu bisa tentuin harga kalau pilih jual langsung. Kalau lelang,
